@@ -26,7 +26,6 @@ public class TcpClientTest extends AbstractClientTest {
 					final InputStream input = socket.getInputStream();
 					final byte[] data = new byte[input.available()];
 					input.read(data);
-					System.err.println("GOT: " + data.length);
 					received.set(Msg.parseFrom(data));
 					serverRecevied();
 				} catch (Exception e) {
