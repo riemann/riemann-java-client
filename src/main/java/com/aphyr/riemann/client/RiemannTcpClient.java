@@ -1,4 +1,4 @@
-package riemann.client;
+package com.aphyr.riemann.client;
 
 import java.io.IOException;
 import java.io.DataOutputStream;
@@ -7,7 +7,7 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
 
-import riemann.Proto.Msg;
+import com.aphyr.riemann.Proto.Msg;
 
 public class RiemannTcpClient extends RiemannClient {
 

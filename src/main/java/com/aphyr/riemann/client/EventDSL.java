@@ -1,7 +1,7 @@
-package riemann.client;
+package com.aphyr.riemann.client;
 
-import riemann.Proto.Event;
-import riemann.client.RiemannClient;
+import com.aphyr.riemann.Proto.Event;
+import com.aphyr.riemann.client.RiemannClient;
 
 import java.util.Arrays;
 import java.util.List;

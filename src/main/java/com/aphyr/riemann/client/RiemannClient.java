@@ -1,4 +1,4 @@
-package riemann.client;
+package com.aphyr.riemann.client;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -7,9 +7,9 @@ import java.net.UnknownHostException;
 import java.util.List;
 import java.util.Arrays;
 
-import riemann.Proto.Event;
-import riemann.Proto.Query;
-import riemann.Proto.Msg;
+import com.aphyr.riemann.Proto.Event;
+import com.aphyr.riemann.Proto.Query;
+import com.aphyr.riemann.Proto.Msg;
 
 public abstract class RiemannClient {
 

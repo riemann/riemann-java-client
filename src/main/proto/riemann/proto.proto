@@ -1,4 +1,4 @@
-option java_package = "riemann";
+option java_package = "com.aphyr.riemann";
 option java_outer_classname = "Proto";
 
 message State {
