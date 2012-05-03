@@ -10,6 +10,8 @@ import java.util.Arrays;
 import com.aphyr.riemann.Proto.Event;
 import com.aphyr.riemann.Proto.Query;
 import com.aphyr.riemann.Proto.Msg;
+import com.aphyr.riemann.client.ServerError;
+
 
 public abstract class RiemannClient {
 
@@ -45,16 +47,15 @@ public abstract class RiemannClient {
     }
   }
 
-  public List<Event> query(String q) throws IOException {
+  public List<Event> query(String q) throws IOException, ServerError {
     Msg m = sendRecvMessage(Msg.newBuilder()
         .setQuery(
           Query.newBuilder().setString(q).build())
         .build());
-    if (m.getOk() == false) {
-      return null;
-    } else {
-      return m.getEventsList();
-    }
+
+    validate(m);
+
+    return m.getEventsList();
   }
 
   public abstract void sendMessage(Msg message) throws IOException;
@@ -70,4 +71,12 @@ public abstract class RiemannClient {
   public abstract void connect() throws IOException;
 
   public abstract void disconnect() throws IOException;
+
+  // Asserts that the message is OK; if not, throws a ServerError.
+  public Msg validate(Msg message) throws IOException, ServerError {
+    if (message.hasOk() && message.getOk() == false) {
+      throw(new ServerError(message.getError()));
+    }
+    return message;
+  } 
 }
