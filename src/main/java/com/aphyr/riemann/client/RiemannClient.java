@@ -35,15 +35,31 @@ public abstract class RiemannClient {
     return new EventDSL(this);
   }
 
-  public Boolean sendEvents(final Event... events) throws IOException {
-    Msg m = sendMaybeRecvMessage(Msg.newBuilder()
-        .addAllEvents(Arrays.asList(events))
-        .build());
+  // Sends events and checks the server's response. Will throw IOException for
+  // network failures, ServerError for error responses from Riemann. Returns
+  // true if events acknowledged.
+  public Boolean sendEventsWithAck(final Event... events) throws IOException, ServerError {
+    validate(
+        sendRecvMessage(
+          Msg.newBuilder()
+            .addAllEvents(Arrays.asList(events))
+            .build()
+        )
+    );
+    return true;
+  }
 
-    if (m.getOk() == false) {
-      return false;
-    } else {
-      return true;
+  // Sends events in fire-and-forget fashion. Doesn't check server response,
+  // swallows all exceptions silently. No guarantees on delivery.
+  public void sendEvents(final Event... events) {
+    try {
+      sendMaybeRecvMessage(
+         Msg.newBuilder()
+          .addAllEvents(Arrays.asList(events))
+          .build()
+      );
+    } catch (IOException e) {
+      // Fuck it.
     }
   }
 

@@ -14,40 +14,71 @@ public class EventDSL {
   public EventDSL(RiemannClient client) {
     this.client = client;
     this.builder = Event.newBuilder();
+    try {
+      this.builder.setHost(java.net.InetAddress.getLocalHost().getHostName());
+    } catch (java.net.UnknownHostException e) {}
   }
 
   public EventDSL host(String host) {
-    builder.setHost(host);
+    if (null == host) {
+      builder.clearHost();
+    } else {
+      builder.setHost(host);
+    }
     return this;
   }
   
   public EventDSL service(String service) {
-    builder.setService(service);
+    if (null == service) {
+      builder.clearService();
+    } else {
+      builder.setService(service);
+    }
     return this;
   }
   
   public EventDSL state(String state) {
-    builder.setState(state);
+    if (null == state) {
+      builder.clearState();
+    } else {
+      builder.setState(state);
+    }
     return this;
   }
   
   public EventDSL description(String description) {
-    builder.setDescription(description);
+    if (null == description) {
+      builder.clearDescription();
+    } else {
+      builder.setDescription(description);
+    }
     return this;
   }
   
-  public EventDSL time(int time) {
-    builder.setTime(time);
+  public EventDSL time(Long time) {
+    if (null == time) {
+      builder.clearTime();
+    } else {
+      builder.setTime(time);
+    }
     return this;
   }
   
-  public EventDSL metric(float metric) {
-    builder.setMetricF(metric);
+  public EventDSL metric(Float metric) {
+    if (null == metric) {
+      builder.clearMetricF();
+    } else {
+      builder.setMetricF(metric);
+    }
     return this;
   }
 
-  public EventDSL metric(int metric) {
-    builder.setMetricF((float) metric);
+  public EventDSL metric(Integer metric) {
+    if (null == metric) {
+      builder.clearMetricF();
+    } else {
+      builder.setMetricF((float) metric);
+    }
     return this;
   }
   
@@ -56,8 +87,12 @@ public class EventDSL {
     return this;
   }
   
-  public EventDSL ttl(float ttl) {
-    builder.setTtl(ttl);
+  public EventDSL ttl(Float ttl) {
+    if (null == ttl) {
+      builder.clearTtl();
+    } else {
+      builder.setTtl(ttl);
+    }
     return this;
   }
  
@@ -71,7 +106,11 @@ public class EventDSL {
     return this;
   }
 
-  public Boolean send() throws IOException {
-    return client.sendEvents(builder.build());
+  public Boolean sendWithAck() throws IOException, ServerError {
+    return client.sendEventsWithAck(builder.build());
+  }
+
+  public void send() {
+    client.sendEvents(builder.build());
   }
 }
