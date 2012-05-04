@@ -14,9 +14,9 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import riemann.Proto.Event;
-import riemann.Proto.Msg;
-import riemann.java.client.RiemannClient;
+import com.aphyr.riemann.Proto.Event;
+import com.aphyr.riemann.Proto.Msg;
+import com.aphyr.riemann.client.RiemannClient;
 
 public abstract class AbstractClientTest {
 
@@ -63,12 +63,12 @@ public abstract class AbstractClientTest {
 		final RiemannClient client = createClient(this.port);
 		if (this.serverStart.await(500, TimeUnit.MILLISECONDS)) {
 			client.connect();
-			client.send(sent);
+			client.sendEvents(sent);
 			if (this.serverReceived.await(500, TimeUnit.MILLISECONDS)) {
 				client.disconnect();
 				compareEvents(sent, this.received.get());
 			} else {
-				fail("Timed out witing for server to received message");
+				fail("Timed out witing for server to receive message");
 			}
 		} else {
 			fail("Timed out waiting for server to start");
