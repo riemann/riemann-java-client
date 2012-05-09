@@ -9,7 +9,7 @@ import java.net.UnknownHostException;
 
 import com.aphyr.riemann.Proto.Msg;
 
-public class RiemannTcpClient extends RiemannClient {
+public class RiemannTcpClient extends AbstractRiemannClient {
 
   private Socket socket;
   private DataOutputStream out;

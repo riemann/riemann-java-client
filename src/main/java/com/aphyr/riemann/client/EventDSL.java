@@ -1,17 +1,16 @@
 package com.aphyr.riemann.client;
 
 import com.aphyr.riemann.Proto.Event;
-import com.aphyr.riemann.client.RiemannClient;
 
 import java.util.Arrays;
 import java.util.List;
 import java.io.IOException;
 
 public class EventDSL {
-    public RiemannClient client;
+    public AbstractRiemannClient client;
     public Event.Builder builder;
 
-    public EventDSL(RiemannClient client) {
+    public EventDSL(AbstractRiemannClient client) {
         this.client = client;
         this.builder = Event.newBuilder();
         try {

@@ -10,24 +10,22 @@ import java.util.Arrays;
 import com.aphyr.riemann.Proto.Event;
 import com.aphyr.riemann.Proto.Query;
 import com.aphyr.riemann.Proto.Msg;
-import com.aphyr.riemann.client.ServerError;
 
-
-public abstract class RiemannClient {
+public abstract class AbstractRiemannClient {
 
   public static final int DEFAULT_PORT = 5555;
 
   protected final InetSocketAddress server;
 
-  public RiemannClient(final InetSocketAddress server) {
+  public AbstractRiemannClient(final InetSocketAddress server) {
     this.server = server;
   }
 
-  public RiemannClient(final int port) throws UnknownHostException {
+  public AbstractRiemannClient(final int port) throws UnknownHostException {
     this.server = new InetSocketAddress(InetAddress.getLocalHost(), port);
   }
 
-  public RiemannClient() throws UnknownHostException {
+  public AbstractRiemannClient() throws UnknownHostException {
     this(new InetSocketAddress(InetAddress.getLocalHost(), DEFAULT_PORT));
   }
  
