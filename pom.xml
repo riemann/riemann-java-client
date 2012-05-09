@@ -10,10 +10,10 @@
 	<description>Java client for http://aphyr.github.com/riemann/</description>
 	<url>/</url>
 
-	<properties>
-		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-	</properties>
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+    </properties>
 
 	<dependencies>
 		<dependency>
@@ -31,72 +31,86 @@
 		</dependency>
 	</dependencies>
 
-	<build>
-		<plugins>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-compiler-plugin</artifactId>
-				<version>2.3.2</version>
-				<configuration>
-					<source>1.6</source>
-					<target>1.6</target>
-				</configuration>
-			</plugin>
+        <dependency>
+            <groupId>com.yammer.metrics</groupId>
+            <artifactId>metrics-core</artifactId>
+            <version>2.1.2</version>
+        </dependency>
+        <!-- TEST DEP's -->
+        <!--		<dependency>
+              <groupId>junit</groupId>
+              <artifactId>junit-dep</artifactId>
+              <version>4.10</version>
+              <scope>test</scope>
+          </dependency>-->
+    </dependencies>
 
-      <plugin>
-          <groupId>org.codehaus.mojo</groupId>
-          <artifactId>build-helper-maven-plugin</artifactId>
-          <version>1.5</version>
-          <executions>
-              <execution>
-                  <id>add-source</id>
-                  <phase>generate-sources</phase>
-                  <goals>
-                      <goal>add-source</goal>
-                  </goals>
-                  <configuration>
-                      <sources>
-                          <source>target/generated-sources</source>
-                      </sources>
-                  </configuration>
-              </execution>
-          </executions>
-      </plugin>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>2.3.2</version>
+                <configuration>
+                    <source>1.6</source>
+                    <target>1.6</target>
+                </configuration>
+            </plugin>
 
-      <plugin>
-        <artifactId>maven-antrun-plugin</artifactId>
-        <executions>
-          <execution>
-            <id>generate-sources</id>
-            <phase>generate-sources</phase>
-             <configuration>
-              <tasks>
-                <mkdir dir="target/generated-sources"/>
-                <exec executable="protoc">
-                  <arg value="--java_out=target/generated-sources"/>
-                  <arg value="src/main/proto/riemann/proto.proto"/>
-                </exec>
-              </tasks>
-            </configuration>
-            <goals>
-              <goal>run</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-		</plugins>
-  </build>
-  
-  <distributionManagement>
-      <repository>
-          <id>maven.boundary.com</id>
-          <name>maven.boundary.com-releases</name>
-          <url>http://maven.boundary.com/artifactory/external</url>
-      </repository>
-      <snapshotRepository>
-          <id>maven.boundary.com</id>
-          <name>maven.boundary.com-snapshots</name>
-          <url>http://maven.boundary.com/artifactory/external</url>
-      </snapshotRepository>
-  </distributionManagement>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>1.5</version>
+                <executions>
+                    <execution>
+                        <id>add-source</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>add-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>target/generated-sources</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>generate-sources</id>
+                        <phase>generate-sources</phase>
+                        <configuration>
+                            <tasks>
+                                <mkdir dir="target/generated-sources"/>
+                                <exec executable="protoc">
+                                    <arg value="--java_out=target/generated-sources"/>
+                                    <arg value="src/main/proto/riemann/proto.proto"/>
+                                </exec>
+                            </tasks>
+                        </configuration>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+    <distributionManagement>
+        <repository>
+            <id>maven.boundary.com</id>
+            <name>maven.boundary.com-releases</name>
+            <url>http://maven.boundary.com/artifactory/external</url>
+        </repository>
+        <snapshotRepository>
+            <id>maven.boundary.com</id>
+            <name>maven.boundary.com-snapshots</name>
+            <url>http://maven.boundary.com/artifactory/external</url>
+        </snapshotRepository>
+    </distributionManagement>
 </project>
