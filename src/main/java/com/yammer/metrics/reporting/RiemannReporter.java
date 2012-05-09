@@ -1,5 +1,6 @@
 package com.yammer.metrics.reporting;
 
+import com.aphyr.riemann.client.AbstractRiemannClient;
 import com.aphyr.riemann.client.EventDSL;
 import com.aphyr.riemann.client.RiemannTcpClient;
 import com.yammer.metrics.Metrics;
@@ -12,6 +13,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Map.Entry;
 import java.util.SortedMap;
+import com.aphyr.riemann.client.RiemannRetryingTcpClient;
 import java.util.concurrent.TimeUnit;
 
 public class RiemannReporter extends AbstractPollingReporter implements MetricProcessor<Long> {
@@ -64,7 +66,7 @@ public class RiemannReporter extends AbstractPollingReporter implements MetricPr
 
     public RiemannReporter(Config c) {
         super(c.metricsRegistry, c.name);
-        this.riemann = new RiemannTcpClient(new InetSocketAddress(c.host, c.port));
+        this.riemann = new RiemannRetryingTcpClient(new InetSocketAddress(c.host, c.port));
         this.predicate = c.predicate;
         this.printVMMetrics = c.printVMMetrics;
         this.prefix = c.prefix;
