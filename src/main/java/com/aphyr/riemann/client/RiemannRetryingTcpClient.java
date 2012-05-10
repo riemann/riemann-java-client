@@ -10,7 +10,7 @@ import java.util.Timer;
 public class RiemannRetryingTcpClient extends RiemannTcpClient {
     protected Timer timer = new Timer(true);
     protected Long lastReconnectionAttempt = 0l; // milliseconds
-    protected long minimumReconnectInterval = 1; // seconds
+    public long minimumReconnectInterval = 1; // seconds
     protected boolean reconnecting = false;
 
     public RiemannRetryingTcpClient() throws UnknownHostException {}
@@ -33,6 +33,10 @@ public class RiemannRetryingTcpClient extends RiemannTcpClient {
         }
     }
 
+    public void setMinimumReconnectInterval(long interval) {
+        minimumReconnectInterval = interval;
+    }
+
     // Attempts to reconnect. Can be called many times; will only try reconnecting every few seconds.
     // If another thread is reconnecting, or a connection attempt was made too recently, returns immediately.
     public void reconnect() throws IOException {
@@ -47,12 +51,15 @@ public class RiemannRetryingTcpClient extends RiemannTcpClient {
         }
 
         if (dooo_iiit) {
-            synchronized(this) {
-                disconnect();
-                connect();
-            }
-            synchronized (lastReconnectionAttempt) {
-                reconnecting = false;
+            try {
+                synchronized(this) {
+                    disconnect();
+                    connect();
+                }
+            } finally {
+                synchronized (lastReconnectionAttempt) {
+                    reconnecting = false;
+                }
             }
         }
     }
