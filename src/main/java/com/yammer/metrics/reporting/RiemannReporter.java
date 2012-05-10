@@ -26,7 +26,7 @@ public class RiemannReporter extends AbstractPollingReporter implements MetricPr
     protected final VirtualMachineMetrics vm;
     public boolean printVMMetrics = true;
 
-    public class Config {
+    public static class Config {
         public MetricsRegistry metricsRegistry = Metrics.defaultRegistry();
         public MetricPredicate predicate = MetricPredicate.ALL;
         public boolean printVMMetrics = false;
@@ -53,6 +53,10 @@ public class RiemannReporter extends AbstractPollingReporter implements MetricPr
         public Config separator(String s) { separator = s; return this; }
         public Config clock(Clock c) { clock = c; return this; }
         public Config name (String n) { name = n; return this; }
+    }
+
+    public static Config config() {
+        return new Config();
     }
 
     public static void enable(Config config) {
