@@ -127,17 +127,16 @@ public class RiemannReporter extends AbstractPollingReporter implements MetricPr
 
     public String service(String... parts) {
         final StringBuilder sb = new StringBuilder();
-        switch (parts.length) {
-            case 0: return null;
-            case 1: return parts[0];
+        if (null != prefix) {
+            sb.append(prefix).append(separator);
         }
 
-        sb.append(parts[0]);
-        for (int i = 1; i < parts.length; i++) {
-            sb.append(separator);
+        for (int i = 0; i < parts.length; i++) {
             sb.append(parts[i]);
+            sb.append(separator);
         }
-        return sb.toString();
+
+        return sb.substring(0, sb.length() - separator.length());
     }
 
     @Override
