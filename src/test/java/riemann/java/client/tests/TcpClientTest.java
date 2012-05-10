@@ -11,6 +11,7 @@ import java.net.UnknownHostException;
 import java.util.concurrent.atomic.AtomicReference;
 
 import com.aphyr.riemann.Proto.Msg;
+import com.aphyr.riemann.client.AbstractRiemannClient;
 import com.aphyr.riemann.client.RiemannClient;
 import com.aphyr.riemann.client.RiemannTcpClient;
 
@@ -49,7 +50,7 @@ public class TcpClientTest extends AbstractClientTest {
 	}
 
 	@Override
-	RiemannClient createClient(int port) throws UnknownHostException {
+    AbstractRiemannClient createClient(int port) throws UnknownHostException {
 		return new RiemannTcpClient(new InetSocketAddress(InetAddress.getLocalHost(), port));
 	}
 }

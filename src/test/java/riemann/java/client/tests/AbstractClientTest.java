@@ -10,6 +10,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import com.aphyr.riemann.client.AbstractRiemannClient;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -55,12 +56,12 @@ public abstract class AbstractClientTest {
 
 	abstract Thread createServer(int port, AtomicReference<Msg> received);
 
-	abstract RiemannClient createClient(int port) throws IOException;
+	abstract AbstractRiemannClient createClient(int port) throws IOException;
 
 	@Test
 	public void sendEvent() throws IOException, InterruptedException {
 		final Event sent = createEvent();
-		final RiemannClient client = createClient(this.port);
+		final AbstractRiemannClient client = createClient(this.port);
 		if (this.serverStart.await(500, TimeUnit.MILLISECONDS)) {
 			client.connect();
 			client.sendEvents(sent);
