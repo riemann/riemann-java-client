@@ -12,7 +12,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import com.aphyr.riemann.Proto.Msg;
 import com.aphyr.riemann.client.AbstractRiemannClient;
-import com.aphyr.riemann.client.RiemannClient;
 import com.aphyr.riemann.client.RiemannTcpClient;
 
 public class TcpClientTest extends AbstractClientTest {
