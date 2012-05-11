@@ -43,7 +43,7 @@ public class RiemannReporter extends AbstractPollingReporter implements MetricPr
         public Config() {}
 
         public Config metricsRegistry(MetricsRegistry r) { metricsRegistry = r; return this; }
-        public Config metricPredicate(MetricPredicate p) { predicate = p; return this; }
+        public Config predicate(MetricPredicate p) { predicate = p; return this; }
         public Config printVMMetrics(Boolean p) { printVMMetrics = p; return this; }
         public Config host(String h) { host = h; return this; }
         public Config port(int p) { port = p; return this; }
@@ -68,9 +68,10 @@ public class RiemannReporter extends AbstractPollingReporter implements MetricPr
         }
     }
 
-    public RiemannReporter(Config c) {
+    public RiemannReporter(Config c) throws IOException {
         super(c.metricsRegistry, c.name);
         this.riemann = new RiemannRetryingTcpClient(new InetSocketAddress(c.host, c.port));
+        riemann.connect();
         this.predicate = c.predicate;
         this.printVMMetrics = c.printVMMetrics;
         this.prefix = c.prefix;
