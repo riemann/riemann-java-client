@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Arrays;
 
@@ -69,7 +70,7 @@ public abstract class AbstractRiemannClient {
 
     validate(m);
 
-    return m.getEventsList();
+    return Collections.unmodifiableList(m.getEventsList());
   }
 
   public abstract void sendMessage(Msg message) throws IOException;
