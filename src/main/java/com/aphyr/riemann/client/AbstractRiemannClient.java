@@ -61,6 +61,26 @@ public abstract class AbstractRiemannClient {
     }
   }
 
+  // Send an Exception event, with state "error" and tagged
+  // "exception". The event will also be tagged with the exception class name.
+  // Description includes the exception class and stack trace.
+  public void sendException(String service, Throwable t) {
+      final StringBuilder desc = new StringBuilder();
+      desc.append(t.toString());
+      desc.append("\n\n");
+      for (StackTraceElement e : t.getStackTrace()) {
+          desc.append(e);
+          desc.append("\n");
+      }
+
+      event().service(service)
+              .state("error")
+              .tag("exception")
+              .tag(t.getClass().getSimpleName())
+              .description(desc.toString())
+              .send();
+  }
+
   public List<Event> query(String q) throws IOException, ServerError {
     Msg m = sendRecvMessage(Msg.newBuilder()
         .setQuery(
