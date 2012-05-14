@@ -15,8 +15,8 @@ public class RiemannTcpClient extends AbstractRiemannClient {
     private DataOutputStream out;
     private DataInputStream in;
 
-    public static int connectTimeout = 5;
-    public static int readTimeout = 5;
+    public static int connectTimeout = 1000;
+    public static int readTimeout = 1000;
 
     public RiemannTcpClient() throws UnknownHostException {
     }
