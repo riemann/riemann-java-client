@@ -17,7 +17,6 @@ import org.junit.Test;
 
 import com.aphyr.riemann.Proto.Event;
 import com.aphyr.riemann.Proto.Msg;
-import com.aphyr.riemann.client.RiemannClient;
 
 public abstract class AbstractClientTest {
 
