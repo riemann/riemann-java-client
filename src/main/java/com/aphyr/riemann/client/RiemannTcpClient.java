@@ -19,6 +19,7 @@ public class RiemannTcpClient extends AbstractRiemannClient {
     public static int readTimeout = 1000;
 
     public RiemannTcpClient() throws UnknownHostException {
+        super();
     }
 
     public RiemannTcpClient(int port) throws UnknownHostException {

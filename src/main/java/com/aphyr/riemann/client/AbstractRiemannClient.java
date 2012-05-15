@@ -37,7 +37,7 @@ public abstract class AbstractRiemannClient {
   // Sends events and checks the server's response. Will throw IOException for
   // network failures, ServerError for error responses from Riemann. Returns
   // true if events acknowledged.
-  public Boolean sendEventsWithAck(final Event... events) throws IOException, ServerError {
+  public Boolean sendEventsWithAck(final Event... events) throws IOException, ServerError, MsgTooLargeException {
     validate(
         sendRecvMessage(
           Msg.newBuilder()
@@ -59,6 +59,8 @@ public abstract class AbstractRiemannClient {
       );
     } catch (IOException e) {
       // Fuck it.
+    } catch (MsgTooLargeException e) {
+      // Similarly.
     }
   }
 
@@ -82,7 +84,7 @@ public abstract class AbstractRiemannClient {
               .send();
   }
 
-  public List<Event> query(String q) throws IOException, ServerError {
+  public List<Event> query(String q) throws IOException, ServerError, MsgTooLargeException {
     Msg m = sendRecvMessage(Msg.newBuilder()
         .setQuery(
           Query.newBuilder().setString(q).build())
@@ -93,13 +95,13 @@ public abstract class AbstractRiemannClient {
     return Collections.unmodifiableList(m.getEventsList());
   }
 
-  public abstract void sendMessage(Msg message) throws IOException;
+  public abstract void sendMessage(Msg message) throws IOException, MsgTooLargeException;
 
   public abstract Msg recvMessage() throws IOException;
 
-  public abstract Msg sendRecvMessage(Msg message) throws IOException;
+  public abstract Msg sendRecvMessage(Msg message) throws IOException, MsgTooLargeException;
 
-  public abstract Msg sendMaybeRecvMessage(Msg message) throws IOException;
+  public abstract Msg sendMaybeRecvMessage(Msg message) throws IOException, MsgTooLargeException;
 
   public abstract boolean isConnected();
 
