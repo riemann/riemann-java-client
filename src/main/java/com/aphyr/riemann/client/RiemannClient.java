@@ -45,7 +45,11 @@ public class RiemannClient extends AbstractRiemannClient {
     // Attempts to dispatch the message quickly via UDP, then falls back to TCP.
     public Msg sendMaybeRecvMessage(Msg message) throws IOException {
         try {
-            return udp.sendMaybeRecvMessage(message);
+            if (udp.canSendMessage(message)) {
+                return udp.sendMaybeRecvMessage(message);
+            } else {
+                return tcp.sendMaybeRecvMessage(e);
+            }
         } catch (MsgTooLargeException e) {
             return tcp.sendMaybeRecvMessage(message);
         }

@@ -21,6 +21,11 @@ public class RiemannUDPClient extends AbstractRiemannClient {
         super(server);
     }
 
+    // Returns true if the message is small enough to be sent.
+    public boolean canSendMessage(Msg message) {
+        return(message.getSerializedSize() <= max_size);
+    }
+
     @Override
     public void sendMessage(Msg message) throws IOException, MsgTooLargeException {
         if (message.getSerializedSize() > MAX_SIZE) {
