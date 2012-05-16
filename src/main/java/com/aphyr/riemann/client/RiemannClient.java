@@ -48,7 +48,7 @@ public class RiemannClient extends AbstractRiemannClient {
             if (udp.canSendMessage(message)) {
                 return udp.sendMaybeRecvMessage(message);
             } else {
-                return tcp.sendMaybeRecvMessage(e);
+                return tcp.sendMaybeRecvMessage(message);
             }
         } catch (MsgTooLargeException e) {
             return tcp.sendMaybeRecvMessage(message);
