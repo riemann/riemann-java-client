@@ -12,6 +12,17 @@ public class RiemannClient extends AbstractRiemannClient {
     public RiemannRetryingTcpClient tcp;
     public RiemannUDPClient udp;
 
+    // Singleton
+    public static RiemannClient singletonClient;
+
+    public static RiemannClient getClient() {
+        return singletonClient;
+    }
+
+    public static void setClient(RiemannClient client) {
+        singletonClient = client;
+    }
+
     public RiemannClient(InetSocketAddress server) {
         super(server);
         udp = new RiemannUDPClient(server);
