@@ -126,7 +126,7 @@ public class EventDSL {
         return this;
     }
 
-    public Boolean sendWithAck() throws IOException, ServerError, MsgTooLargeException  {
+    public Boolean sendWithAck() throws IOException, ServerError, MsgTooLargeException {
         return client.sendEventsWithAck(builder.build());
     }
 
