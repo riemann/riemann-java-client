@@ -10,8 +10,8 @@ import java.util.Timer;
 public class RiemannRetryingTcpClient extends RiemannTcpClient {
     protected final Object reconnectionLock = new Object();
     protected long lastReconnectionAttempt = 0l; // milliseconds
-    public long minimumReconnectInterval = 1; // seconds
-    protected boolean reconnecting = false;
+    public volatile long minimumReconnectInterval = 1; // seconds
+    protected volatile boolean reconnecting = false;
 
     public RiemannRetryingTcpClient() throws UnknownHostException {}
 
