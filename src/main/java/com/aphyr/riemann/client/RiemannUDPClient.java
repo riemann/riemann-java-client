@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.*;
 
 import com.aphyr.riemann.Proto.Msg;
+import com.aphyr.riemann.client.exceptions.MsgTooLargeException;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 public class RiemannUDPClient extends AbstractRiemannClient {
@@ -51,7 +52,7 @@ public class RiemannUDPClient extends AbstractRiemannClient {
 
     @Override
     public boolean isConnected() {
-        return false;
+        return true;
     }
 
     @Override
