@@ -1,6 +1,5 @@
 package com.aphyr.riemann.client;
 
-import javax.xml.crypto.Data;
 import java.io.IOException;
 import java.net.*;
 
@@ -8,8 +7,7 @@ import com.aphyr.riemann.Proto.Msg;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 public class RiemannUDPClient extends AbstractRiemannClient {
-    protected DatagramSocket socket;
-    protected int max_size = 16384;
+    protected static final int MAX_SIZE = 16384;
 
     public RiemannUDPClient() throws UnknownHostException {
         super();
@@ -25,14 +23,14 @@ public class RiemannUDPClient extends AbstractRiemannClient {
 
     @Override
     public void sendMessage(Msg message) throws IOException, MsgTooLargeException {
-        if (message.getSerializedSize() > max_size) {
+        if (message.getSerializedSize() > MAX_SIZE) {
             throw new MsgTooLargeException();
         }
 
         byte[] buf = message.toByteArray();
-        synchronized(this) {
-            socket.send(new DatagramPacket(buf, buf.length, server));
-        }
+        DatagramSocket socket = new DatagramSocket();
+        socket.send(new DatagramPacket(buf, buf.length, server));
+        socket.close();
     }
 
     @Override
@@ -53,20 +51,16 @@ public class RiemannUDPClient extends AbstractRiemannClient {
 
     @Override
     public boolean isConnected() {
-        return this.socket != null && this.socket.isConnected();
+        return true;
     }
 
     @Override
     public void connect() throws IOException {
-        synchronized (this) {
-            socket = new DatagramSocket();
-        }
+        // do nothing on UDP
     }
 
     @Override
     public void disconnect() throws IOException {
-        synchronized(this) {
-            socket.close();
-        }
+        // do nothing on UDP
     }
 }
