@@ -8,8 +8,8 @@ import java.util.Timer;
 
 // Like RiemannTCPClient, but automatically tries one reconnect/resubmit when an IO error occurs.
 public class RiemannRetryingTcpClient extends RiemannTcpClient {
-    protected Timer timer = new Timer(true);
-    protected Long lastReconnectionAttempt = 0l; // milliseconds
+    protected final Object reconnectionLock = new Object();
+    protected long lastReconnectionAttempt = 0l; // milliseconds
     public long minimumReconnectInterval = 1; // seconds
     protected boolean reconnecting = false;
 
@@ -41,8 +41,8 @@ public class RiemannRetryingTcpClient extends RiemannTcpClient {
     // If another thread is reconnecting, or a connection attempt was made too recently, returns immediately.
     public void reconnect() throws IOException {
         Boolean dooo_iiit = false; // paging joedamato
-        synchronized(lastReconnectionAttempt) {
-            if (reconnecting == false &&
+        synchronized(reconnectionLock) {
+            if (!reconnecting &&
                     (System.currentTimeMillis() - lastReconnectionAttempt) > (minimumReconnectInterval * 1000)) {
                 dooo_iiit = true;
                 reconnecting = true;
@@ -57,7 +57,7 @@ public class RiemannRetryingTcpClient extends RiemannTcpClient {
                     connect();
                 }
             } finally {
-                synchronized (lastReconnectionAttempt) {
+                synchronized (reconnectionLock) {
                     reconnecting = false;
                 }
             }
