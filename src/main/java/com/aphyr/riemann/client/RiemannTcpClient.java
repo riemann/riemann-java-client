@@ -10,10 +10,10 @@ import java.net.UnknownHostException;
 import com.aphyr.riemann.Proto.Msg;
 
 public class RiemannTcpClient extends AbstractRiemannClient {
-
-    private Socket socket;
-    private DataOutputStream out;
-    private DataInputStream in;
+    protected Socket socket;
+    protected final Object socketLock = new Object();
+    protected DataOutputStream out;
+    protected DataInputStream in;
 
     public static int connectTimeout = 1000;
     public static int readTimeout = 1000;
@@ -30,6 +30,7 @@ public class RiemannTcpClient extends AbstractRiemannClient {
         super(server);
     }
 
+    // This method is not synchronized.
     @Override
     public void sendMessage(Msg message) throws IOException {
         if (message == null) {
@@ -40,6 +41,7 @@ public class RiemannTcpClient extends AbstractRiemannClient {
         out.flush();
     }
 
+    // This method is not synchronized.
     @Override
     public Msg recvMessage() throws IOException {
         // Get length header
@@ -56,7 +58,7 @@ public class RiemannTcpClient extends AbstractRiemannClient {
 
     @Override
     public Msg sendRecvMessage(Msg message) throws IOException {
-        synchronized (this) {
+        synchronized (socketLock) {
             sendMessage(message);
             return recvMessage();
         }
@@ -69,12 +71,14 @@ public class RiemannTcpClient extends AbstractRiemannClient {
 
     @Override
     public boolean isConnected() {
-        return this.socket != null && this.socket.isConnected();
+        synchronized (socketLock) {
+            return this.socket != null && this.socket.isConnected();
+        }
     }
 
     @Override
     public void connect() throws IOException {
-        synchronized (this) {
+        synchronized (socketLock) {
             socket = new Socket();
             socket.connect(super.server, connectTimeout);
             socket.setSoTimeout(readTimeout);
@@ -86,7 +90,7 @@ public class RiemannTcpClient extends AbstractRiemannClient {
 
     @Override
     public void disconnect() throws IOException {
-        synchronized (this) {
+        synchronized (socketLock) {
             this.out.close();
             this.in.close();
             this.socket.close();
