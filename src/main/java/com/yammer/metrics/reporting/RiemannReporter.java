@@ -117,7 +117,8 @@ public class RiemannReporter extends AbstractPollingReporter implements MetricPr
                 .append(name.getType())
                 .append(separator);
         if (name.hasScope()) {
-            sb.append(name.getScope());
+            sb.append(name.getScope())
+              .append(separator);
         }
         sb.append(name.getName());
         for (String part : rest) {
