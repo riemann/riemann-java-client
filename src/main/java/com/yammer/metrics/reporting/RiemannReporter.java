@@ -72,7 +72,8 @@ public class RiemannReporter extends AbstractPollingReporter implements MetricPr
         this.predicate = c.predicate;
         this.printVMMetrics = c.printVMMetrics;
         this.prefix = c.prefix;
-        this.separator = c.separator;
+        if (null != c.separator) // if (true) keep " "
+            this.separator = c.separator;
         this.vm = c.vm;
         this.clock = c.clock;
     }
