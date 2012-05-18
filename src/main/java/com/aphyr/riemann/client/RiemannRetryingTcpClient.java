@@ -1,4 +1,5 @@
 package com.aphyr.riemann.client;
+
 import com.aphyr.riemann.Proto.Msg;
 
 import java.io.IOException;
@@ -10,10 +11,11 @@ import java.util.Timer;
 public class RiemannRetryingTcpClient extends RiemannTcpClient {
     protected final Object reconnectionLock = new Object();
     protected long lastReconnectionAttempt = 0l; // milliseconds
-    public volatile long minimumReconnectInterval = 1; // seconds
+    public volatile long minimumReconnectInterval = 1;
     protected volatile boolean reconnecting = false;
 
-    public RiemannRetryingTcpClient() throws UnknownHostException {}
+    public RiemannRetryingTcpClient() throws UnknownHostException {
+    }
 
     public RiemannRetryingTcpClient(int port) throws UnknownHostException {
         super(port);
@@ -33,34 +35,42 @@ public class RiemannRetryingTcpClient extends RiemannTcpClient {
         }
     }
 
+    /**
+     * @param interval reconnection time in SECONDS
+     */
     public void setMinimumReconnectInterval(long interval) {
-        minimumReconnectInterval = interval;
+        if (interval < 0)
+            throw new IllegalArgumentException("Invalid interval time");
+
+        minimumReconnectInterval = interval * 1000; // receive in seconds, convert to ms
     }
 
     // Attempts to reconnect. Can be called many times; will only try reconnecting every few seconds.
     // If another thread is reconnecting, or a connection attempt was made too recently, returns immediately.
     public void reconnect() throws IOException {
-        Boolean dooo_iiit = false; // paging joedamato
-        synchronized(reconnectionLock) {
-            if (!reconnecting &&
-                    (System.currentTimeMillis() - lastReconnectionAttempt) > (minimumReconnectInterval * 1000)) {
-                dooo_iiit = true;
+
+        synchronized (reconnectionLock) {
+            long lastestAttempt = System.currentTimeMillis() - lastReconnectionAttempt;
+            if (!reconnecting && lastestAttempt > minimumReconnectInterval) {
                 reconnecting = true;
                 lastReconnectionAttempt = System.currentTimeMillis();
+            } else {
+                // no time to reconnect yet or reconnection already in progress
+                // release lock and get off here! :)
+                return;
             }
         }
 
-        if (dooo_iiit) {
-            try {
-                synchronized(this) {
-                    disconnect();
-                    connect();
-                }
-            } finally {
-                synchronized (reconnectionLock) {
-                    reconnecting = false;
-                }
+        try {
+            synchronized (this) {
+                disconnect();
+                connect();
+            }
+        } finally {
+            synchronized (reconnectionLock) {
+                reconnecting = false;
             }
         }
+
     }
- }
+}
