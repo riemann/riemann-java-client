@@ -24,19 +24,19 @@ public class NonReplyingTcpServerTest extends AbstractClientTest {
 					final ServerSocket server = new ServerSocket(port);
 					serverStarted();
 					final Socket socket = server.accept();
-					received.set(recieve(socket));
-					serverRecevied();
+					received.set(receive(socket));
+					serverReceived();
 				} catch (Exception e) {
 					e.printStackTrace();
 				}
 			}
 
-			private Msg recieve(final Socket socket) throws IOException {
+			private Msg receive(final Socket socket) throws IOException {
 				final DataInputStream input = new DataInputStream(socket.getInputStream());
 				final byte[] data = new byte[input.readInt()];
 				input.readFully(data);
 				return Msg.parseFrom(data);
-			};
+			}
 		};
 	}
 

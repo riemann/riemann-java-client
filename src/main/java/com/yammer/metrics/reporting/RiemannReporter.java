@@ -33,7 +33,7 @@ public class RiemannReporter extends AbstractPollingReporter implements MetricPr
         public TimeUnit unit = TimeUnit.SECONDS;
         public String prefix = null;
         public String separator = " ";
-        public VirtualMachineMetrics vm = VirtualMachineMetrics.getInstance();
+        public final VirtualMachineMetrics vm = VirtualMachineMetrics.getInstance();
         public Clock clock = Clock.defaultClock();
         public String name = "riemann-reporter";
 
@@ -134,9 +134,8 @@ public class RiemannReporter extends AbstractPollingReporter implements MetricPr
             sb.append(prefix).append(separator);
         }
 
-        for (int i = 0; i < parts.length; i++) {
-            sb.append(parts[i]);
-            sb.append(separator);
+        for (String p : parts) {
+            sb.append(p).append(separator);
         }
 
         return sb.substring(0, sb.length() - separator.length());

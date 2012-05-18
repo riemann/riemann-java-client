@@ -9,8 +9,8 @@ import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 // A hybrid UDP/TCP client.
 public class RiemannClient extends AbstractRiemannClient {
-    public RiemannRetryingTcpClient tcp;
-    public RiemannUDPClient udp;
+    public final RiemannRetryingTcpClient tcp;
+    public final RiemannUDPClient udp;
 
     // Singleton
     public static RiemannClient singletonClient;
