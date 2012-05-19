@@ -106,6 +106,10 @@ public class RiemannReporter extends AbstractPollingReporter implements MetricPr
         }
     }
 
+    private EventDSL newEvent() {
+        return riemann.event();
+    }
+
     // The service name for a given metric.
     public String service(MetricName name, String... rest) {
         final StringBuilder sb = new StringBuilder();
@@ -145,7 +149,7 @@ public class RiemannReporter extends AbstractPollingReporter implements MetricPr
     @Override
     public void processGauge(MetricName name, Gauge<?> gauge, Long epoch) {
         Object v = gauge.value();
-        EventDSL e = riemann.event().service(service(name)).time(epoch);
+        EventDSL e = newEvent().service(service(name)).time(epoch);
         if (v instanceof Integer) {
             e.metric((Integer) v).send();
         } else if (v instanceof Long) {
@@ -161,7 +165,7 @@ public class RiemannReporter extends AbstractPollingReporter implements MetricPr
 
     @Override
     public void processCounter(MetricName name, Counter counter, Long epoch) {
-        riemann.event()
+        newEvent()
                 .service(service(name))
                 .metric(counter.count())
                 .time(epoch)
@@ -170,7 +174,7 @@ public class RiemannReporter extends AbstractPollingReporter implements MetricPr
 
     @Override
     public void processMeter(MetricName name, Metered meter, Long epoch) {
-        riemann.event()
+        newEvent()
                 .service(service(name))
                 .metric(meter.oneMinuteRate())
                 .time(epoch)
@@ -192,40 +196,40 @@ public class RiemannReporter extends AbstractPollingReporter implements MetricPr
     }
 
     protected void sendVMMetrics(long epoch) {
-        riemann.event().time(epoch).service(service("jvm", "memory", "heap-usage")).metric(vm.heapUsage()).send();
-        riemann.event().time(epoch).service(service("jvm", "memory", "non-heap-usage")).metric(vm.nonHeapUsage()).send();
+        newEvent().time(epoch).service(service("jvm", "memory", "heap-usage")).metric(vm.heapUsage()).send();
+        newEvent().time(epoch).service(service("jvm", "memory", "non-heap-usage")).metric(vm.nonHeapUsage()).send();
         for (Entry<String, Double> pool : vm.memoryPoolUsage().entrySet()) {
-            riemann.event().time(epoch).service(service("jvm", "memory", "pool-usage", pool.getKey())).metric(pool.getValue()).send();
+            newEvent().time(epoch).service(service("jvm", "memory", "pool-usage", pool.getKey())).metric(pool.getValue()).send();
         }
-        riemann.event().time(epoch).service(service("jvm", "thread", "daemon-count")).metric(vm.daemonThreadCount()).send();
-        riemann.event().time(epoch).service(service("jvm", "thread", "count")).metric(vm.threadCount()).send();
-        riemann.event().time(epoch).service(service("jvm", "uptime")).metric(vm.uptime()).send();
-        riemann.event().time(epoch).service(service("jvm", "fd-usage")).metric(vm.fileDescriptorUsage()).send();
+        newEvent().time(epoch).service(service("jvm", "thread", "daemon-count")).metric(vm.daemonThreadCount()).send();
+        newEvent().time(epoch).service(service("jvm", "thread", "count")).metric(vm.threadCount()).send();
+        newEvent().time(epoch).service(service("jvm", "uptime")).metric(vm.uptime()).send();
+        newEvent().time(epoch).service(service("jvm", "fd-usage")).metric(vm.fileDescriptorUsage()).send();
 
         for(Entry<Thread.State, Double> entry : vm.threadStatePercentages().entrySet()) {
-            riemann.event().time(epoch).service(service("jvm", "thread", "state", entry.getKey().toString().toLowerCase())).metric(entry.getValue()).send();
+            newEvent().time(epoch).service(service("jvm", "thread", "state", entry.getKey().toString().toLowerCase())).metric(entry.getValue()).send();
         }
 
         for(Entry<String, VirtualMachineMetrics.GarbageCollectorStats> entry : vm.garbageCollectors().entrySet()) {
-            riemann.event().time(epoch).service(service("jvm", "gc", entry.getKey(), "time")).metric(entry.getValue().getTime(TimeUnit.MILLISECONDS)).send();
-            riemann.event().time(epoch).service(service("jvm", "gc", entry.getKey(), "runs")).metric(entry.getValue().getRuns()).send();
+            newEvent().time(epoch).service(service("jvm", "gc", entry.getKey(), "time")).metric(entry.getValue().getTime(TimeUnit.MILLISECONDS)).send();
+            newEvent().time(epoch).service(service("jvm", "gc", entry.getKey(), "runs")).metric(entry.getValue().getRuns()).send();
         }
     }
 
     public void sendSummary(MetricName name, Summarizable metric, Long epoch) {
-        riemann.event().time(epoch).service(service(name, "min")).metric(metric.min()).send();
-        riemann.event().time(epoch).service(service(name, "max")).metric(metric.max()).send();
-        riemann.event().time(epoch).service(service(name, "mean")).metric(metric.mean()).send();
-        riemann.event().time(epoch).service(service(name, "stddev")).metric(metric.stdDev()).send();
+        newEvent().time(epoch).service(service(name, "min")).metric(metric.min()).send();
+        newEvent().time(epoch).service(service(name, "max")).metric(metric.max()).send();
+        newEvent().time(epoch).service(service(name, "mean")).metric(metric.mean()).send();
+        newEvent().time(epoch).service(service(name, "stddev")).metric(metric.stdDev()).send();
     }
 
     public void sendSample(MetricName name, Sampling metric, Long epoch) {
         final Snapshot s = metric.getSnapshot();
-        riemann.event().time(epoch).service(service(name, ".5")).metric(s.getMedian()).send();
-        riemann.event().time(epoch).service(service(name, ".75")).metric(s.get75thPercentile()).send();
-        riemann.event().time(epoch).service(service(name, ".95")).metric(s.get95thPercentile()).send();
-        riemann.event().time(epoch).service(service(name, ".98")).metric(s.get98thPercentile()).send();
-        riemann.event().time(epoch).service(service(name, ".99")).metric(s.get99thPercentile()).send();
-        riemann.event().time(epoch).service(service(name, ".999")).metric(s.get999thPercentile()).send();
+        newEvent().time(epoch).service(service(name, ".5")).metric(s.getMedian()).send();
+        newEvent().time(epoch).service(service(name, ".75")).metric(s.get75thPercentile()).send();
+        newEvent().time(epoch).service(service(name, ".95")).metric(s.get95thPercentile()).send();
+        newEvent().time(epoch).service(service(name, ".98")).metric(s.get98thPercentile()).send();
+        newEvent().time(epoch).service(service(name, ".99")).metric(s.get99thPercentile()).send();
+        newEvent().time(epoch).service(service(name, ".999")).metric(s.get999thPercentile()).send();
     }
 }
