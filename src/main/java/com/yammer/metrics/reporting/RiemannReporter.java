@@ -22,6 +22,7 @@ public class RiemannReporter extends AbstractPollingReporter implements MetricPr
     protected final String separator;
     protected final VirtualMachineMetrics vm;
     public boolean printVMMetrics = true;
+    protected final String localHost;
 
     public static class Config {
         public MetricsRegistry metricsRegistry = Metrics.defaultRegistry();
@@ -36,6 +37,7 @@ public class RiemannReporter extends AbstractPollingReporter implements MetricPr
         public VirtualMachineMetrics vm = VirtualMachineMetrics.getInstance();
         public Clock clock = Clock.defaultClock();
         public String name = "riemann-reporter";
+        public String localHost = null;
 
         public Config() {}
 
@@ -50,6 +52,7 @@ public class RiemannReporter extends AbstractPollingReporter implements MetricPr
         public Config separator(String s) { separator = s; return this; }
         public Config clock(Clock c) { clock = c; return this; }
         public Config name (String n) { name = n; return this; }
+        public Config localHost (String l) { localHost = l; return this; }
     }
 
     public static Config config() {
@@ -75,6 +78,7 @@ public class RiemannReporter extends AbstractPollingReporter implements MetricPr
         this.separator = c.separator;
         this.vm = c.vm;
         this.clock = c.clock;
+        this.localHost = c.localHost;
     }
 
     @Override
@@ -107,7 +111,11 @@ public class RiemannReporter extends AbstractPollingReporter implements MetricPr
     }
 
     private EventDSL newEvent() {
-        return riemann.event();
+        EventDSL event = riemann.event();
+        if (localHost != null) {
+            event.host(localHost);
+        }
+        return event;
     }
 
     // The service name for a given metric.
