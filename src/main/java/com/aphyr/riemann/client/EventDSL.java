@@ -7,8 +7,8 @@ import java.util.List;
 import java.io.IOException;
 
 public class EventDSL {
-    public AbstractRiemannClient client;
-    public Event.Builder builder;
+    public final AbstractRiemannClient client;
+    public final Event.Builder builder;
 
     public EventDSL(AbstractRiemannClient client) {
         this.client = client;

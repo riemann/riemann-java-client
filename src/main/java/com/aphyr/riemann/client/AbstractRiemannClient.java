@@ -111,8 +111,8 @@ public abstract class AbstractRiemannClient {
 
   // Asserts that the message is OK; if not, throws a ServerError.
   public Msg validate(Msg message) throws IOException, ServerError {
-    if (message.hasOk() && message.getOk() == false) {
-      throw(new ServerError(message.getError()));
+    if (message.hasOk() && !message.getOk()) {
+      throw new ServerError(message.getError());
     }
     return message;
   } 
