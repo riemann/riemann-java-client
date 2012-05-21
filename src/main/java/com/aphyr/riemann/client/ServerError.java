@@ -1,7 +1,7 @@
 package com.aphyr.riemann.client;
 
 public class ServerError extends Exception {
-  public String message;
+  public final String message;
 
   public ServerError(String message) {
     this.message = message;

@@ -1,13 +1,13 @@
 package com.aphyr.riemann.client;
 
-import java.io.IOException;
-import java.io.DataOutputStream;
+import com.aphyr.riemann.Proto.Msg;
+
 import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
-
-import com.aphyr.riemann.Proto.Msg;
 
 public class RiemannTcpClient extends AbstractRiemannClient {
     protected Socket socket;
@@ -15,8 +15,8 @@ public class RiemannTcpClient extends AbstractRiemannClient {
     protected DataOutputStream out;
     protected DataInputStream in;
 
-    public static int connectTimeout = 1000;
-    public static int readTimeout = 1000;
+    public static final int connectTimeout = 1000;
+    public static final int readTimeout = 1000;
 
     public RiemannTcpClient() throws UnknownHostException {
         super();
@@ -34,7 +34,7 @@ public class RiemannTcpClient extends AbstractRiemannClient {
     @Override
     public void sendMessage(Msg message) throws IOException {
         if (message == null) {
-            throw new RuntimeException("Null message");
+            throw new IllegalArgumentException("Null message");
         }
         out.writeInt(message.getSerializedSize());
         message.writeTo(out);

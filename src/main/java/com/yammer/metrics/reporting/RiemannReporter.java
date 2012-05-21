@@ -34,7 +34,7 @@ public class RiemannReporter extends AbstractPollingReporter implements MetricPr
         public TimeUnit unit = TimeUnit.SECONDS;
         public String prefix = null;
         public String separator = " ";
-        public VirtualMachineMetrics vm = VirtualMachineMetrics.getInstance();
+        public final VirtualMachineMetrics vm = VirtualMachineMetrics.getInstance();
         public Clock clock = Clock.defaultClock();
         public String name = "riemann-reporter";
         public String localHost = null;
@@ -75,7 +75,8 @@ public class RiemannReporter extends AbstractPollingReporter implements MetricPr
         this.predicate = c.predicate;
         this.printVMMetrics = c.printVMMetrics;
         this.prefix = c.prefix;
-        this.separator = c.separator;
+        if (null != c.separator) // if (true) keep " "
+            this.separator = c.separator;
         this.vm = c.vm;
         this.clock = c.clock;
         this.localHost = c.localHost;
@@ -146,9 +147,8 @@ public class RiemannReporter extends AbstractPollingReporter implements MetricPr
             sb.append(prefix).append(separator);
         }
 
-        for (int i = 0; i < parts.length; i++) {
-            sb.append(parts[i]);
-            sb.append(separator);
+        for (String p : parts) {
+            sb.append(p).append(separator);
         }
 
         return sb.substring(0, sb.length() - separator.length());

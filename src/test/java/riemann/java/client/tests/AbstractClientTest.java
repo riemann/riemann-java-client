@@ -49,7 +49,7 @@ public abstract class AbstractClientTest {
 		this.serverStart.countDown();
 	}
 
-	protected void serverRecevied() {
+	protected void serverReceived() {
 		this.serverReceived.countDown();
 	}
 
