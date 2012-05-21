@@ -10,11 +10,12 @@ import java.util.Timer;
 // Like RiemannTCPClient, but automatically tries one reconnect/resubmit when an IO error occurs.
 public class RiemannRetryingTcpClient extends RiemannTcpClient {
     protected final Object reconnectionLock = new Object();
-    protected long lastReconnectionAttempt = 0l; // milliseconds
-    public volatile long minimumReconnectInterval = 1;
+    protected long lastReconnectionAttempt = 0l;        // milliseconds
+    public volatile long minimumReconnectInterval = 1;  // seconds
     protected volatile boolean reconnecting = false;
 
     public RiemannRetryingTcpClient() throws UnknownHostException {
+      super();
     }
 
     public RiemannRetryingTcpClient(int port) throws UnknownHostException {
