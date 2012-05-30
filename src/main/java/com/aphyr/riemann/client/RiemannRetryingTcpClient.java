@@ -51,8 +51,8 @@ public class RiemannRetryingTcpClient extends RiemannTcpClient {
     public void reconnect() throws IOException {
 
         synchronized (reconnectionLock) {
-            long lastestAttempt = System.currentTimeMillis() - lastReconnectionAttempt;
-            if (!reconnecting && lastestAttempt > minimumReconnectInterval) {
+            long latestAttempt = System.currentTimeMillis() - lastReconnectionAttempt;
+            if (!reconnecting && latestAttempt > minimumReconnectInterval) {
                 reconnecting = true;
                 lastReconnectionAttempt = System.currentTimeMillis();
             } else {
