@@ -15,52 +15,99 @@ import java.util.concurrent.TimeUnit;
 
 public class RiemannReporter extends AbstractPollingReporter implements MetricProcessor<Long> {
     private static final Logger LOG = LoggerFactory.getLogger(RiemannReporter.class);
-    protected final Clock clock;
-    protected final MetricPredicate predicate;
     protected final RiemannClient riemann;
-    protected final String prefix;
-    protected final String separator;
-    protected final VirtualMachineMetrics vm;
-    public boolean printVMMetrics = true;
-    protected final String localHost;
+    protected final Config c;
 
     public static class Config {
-        public MetricsRegistry metricsRegistry = Metrics.defaultRegistry();
-        public MetricPredicate predicate = MetricPredicate.ALL;
-        public boolean printVMMetrics = false;
-        public String host = "localhost";
-        public int port = 5555;
-        public long period = 60;
-        public TimeUnit unit = TimeUnit.SECONDS;
-        public String prefix = null;
-        public String separator = " ";
+
+        public final MetricsRegistry metricsRegistry;
+        public final MetricPredicate predicate;
+        public final boolean printVMMetrics;
+        public final String host;
+        public final int port;
+        public final long period;
+        public final TimeUnit unit;
+        public final String prefix;
+        public final String separator;
         public final VirtualMachineMetrics vm = VirtualMachineMetrics.getInstance();
-        public Clock clock = Clock.defaultClock();
-        public String name = "riemann-reporter";
-        public String localHost = null;
+        public final Clock clock;
+        public final String name;
+        public final String localHost;
 
-        public Config() {}
+        private Config(MetricsRegistry metricsRegistry, MetricPredicate predicate, boolean printVMMetrics,
+                       String host, int port, long period, TimeUnit unit, String prefix, String separator,
+                       Clock clock, String name, String localHost) {
+            this.metricsRegistry = metricsRegistry;
+            this.predicate = predicate;
+            this.printVMMetrics = printVMMetrics;
+            this.host = host;
+            this.port = port;
+            this.period = period;
+            this.unit = unit;
+            this.prefix = prefix;
+            this.separator = separator;
+            this.clock = clock;
+            this.name = name;
+            this.localHost = localHost;
 
-        public Config metricsRegistry(MetricsRegistry r) { metricsRegistry = r; return this; }
-        public Config predicate(MetricPredicate p) { predicate = p; return this; }
-        public Config printVMMetrics(Boolean p) { printVMMetrics = p; return this; }
-        public Config host(String h) { host = h; return this; }
-        public Config port(int p) { port = p; return this; }
-        public Config period(long p) { period = p; return this; }
-        public Config unit(TimeUnit t) { unit = t; return this; }
-        public Config prefix(String p) { prefix = p; return this; }
-        public Config separator(String s) { separator = s; return this; }
-        public Config clock(Clock c) { clock = c; return this; }
-        public Config name (String n) { name = n; return this; }
-        public Config localHost (String l) { localHost = l; return this; }
+        }
+
+        public static ConfigBuilder newBuilder() {
+            return new ConfigBuilder();
+        }
+
+        @Override
+        public String toString() {
+            return "Config{" +
+                    "print_metrics:" + printVMMetrics + ", host:" + host + ", port:" + port + ", period:" + period +
+                    ", unit:" + unit + ", prefix:" + prefix + ", separator:" + separator + ", clock:" + clock +
+                    ", name:" + name + ", localhost:" + localHost + ", metrics_registry:" + metricsRegistry +
+                    ", predicate:" + predicate + "}";
+        }
     }
 
-    public static Config config() {
-        return new Config();
+    public static final class ConfigBuilder {
+        // Default values for Config
+        private MetricsRegistry metricsRegistry = Metrics.defaultRegistry();
+        private MetricPredicate predicate = MetricPredicate.ALL;
+        private boolean printVMMetrics = true;
+        private String host = "localhost";
+        private int port = 5555;
+        private long period = 60;
+        private TimeUnit unit = TimeUnit.SECONDS;
+        private String prefix = null;
+        private String separator = " ";
+        private final VirtualMachineMetrics vm = VirtualMachineMetrics.getInstance();
+        private Clock clock = Clock.defaultClock();
+        private String name = "riemann-reporter";
+        private String localHost = null;
+
+        private ConfigBuilder() { }
+
+        public Config build(){
+            return new Config(metricsRegistry, predicate, printVMMetrics, host, port,
+                              period, unit, prefix, separator, clock, name, localHost);
+        }
+
+        public ConfigBuilder metricsRegistry(MetricsRegistry r) { metricsRegistry = r; return this; }
+        public ConfigBuilder predicate(MetricPredicate p) { predicate = p; return this; }
+        public ConfigBuilder printVMMetrics(Boolean p) { printVMMetrics = p; return this; }
+        public ConfigBuilder host(String h) { host = h; return this; }
+        public ConfigBuilder port(int p) { port = p; return this; }
+        public ConfigBuilder period(long p) { period = p; return this; }
+        public ConfigBuilder unit(TimeUnit t) { unit = t; return this; }
+        public ConfigBuilder prefix(String p) { prefix = p; return this; }
+        public ConfigBuilder separator(String s) { separator = s; return this; }
+        public ConfigBuilder clock(Clock c) { clock = c; return this;        }
+        public ConfigBuilder name(String n) { name = n; return this; }
+        public ConfigBuilder localHost(String l) { localHost = l; return this; }
     }
 
-    public static void enable(Config config) {
+    public static void enable(final Config config) {
         try {
+            if (config == null)
+                throw new IllegalArgumentException("Config cannot be null");
+
             final RiemannReporter reporter = new RiemannReporter(config);
             reporter.start(config.period, config.unit);
         } catch (Exception e) {
@@ -68,24 +115,18 @@ public class RiemannReporter extends AbstractPollingReporter implements MetricPr
         }
     }
 
-    public RiemannReporter(Config c) throws IOException {
+    public RiemannReporter(final Config c) throws IOException {
         super(c.metricsRegistry, c.name);
         this.riemann = new RiemannClient(new InetSocketAddress(c.host, c.port));
         riemann.connect();
-        this.predicate = c.predicate;
-        this.printVMMetrics = c.printVMMetrics;
-        this.prefix = c.prefix;
-        this.separator = c.separator;
-        this.vm = c.vm;
-        this.clock = c.clock;
-        this.localHost = c.localHost;
+        this.c = c;
     }
 
     @Override
     public void run() {
         try {
-            final long epoch = clock.time() / 1000;
-            if (this.printVMMetrics) {
+            final long epoch = c.clock.time() / 1000;
+            if (c.printVMMetrics) {
                 sendVMMetrics(epoch);
             }
 
@@ -96,7 +137,7 @@ public class RiemannReporter extends AbstractPollingReporter implements MetricPr
     }
 
     protected void sendRegularMetrics(final Long epoch) {
-        for (Entry<String,SortedMap<MetricName,Metric>> entry : getMetricsRegistry().groupedMetrics(predicate).entrySet()) {
+        for (Entry<String,SortedMap<MetricName,Metric>> entry : getMetricsRegistry().groupedMetrics(c.predicate).entrySet()) {
             for (Entry<MetricName, Metric> subEntry : entry.getValue().entrySet()) {
                 final Metric metric = subEntry.getValue();
                 if (metric != null) {
@@ -112,8 +153,8 @@ public class RiemannReporter extends AbstractPollingReporter implements MetricPr
 
     private EventDSL newEvent() {
         EventDSL event = riemann.event();
-        if (localHost != null) {
-            event.host(localHost);
+        if (c.localHost != null) {
+            event.host(c.localHost);
         }
         return event;
     }
@@ -121,20 +162,20 @@ public class RiemannReporter extends AbstractPollingReporter implements MetricPr
     // The service name for a given metric.
     public String service(MetricName name, String... rest) {
         final StringBuilder sb = new StringBuilder();
-        if (null != prefix) {
-            sb.append(prefix).append(separator);
+        if (null != c.prefix) {
+            sb.append(c.prefix).append(c.separator);
         }
         sb.append(name.getGroup())
-                .append(separator)
+                .append(c.separator)
                 .append(name.getType())
-                .append(separator);
+                .append(c.separator);
         if (name.hasScope()) {
             sb.append(name.getScope())
-              .append(separator);
+              .append(c.separator);
         }
         sb.append(name.getName());
         for (String part : rest) {
-            sb.append(separator);
+            sb.append(c.separator);
             sb.append(part);
         }
         return sb.toString();
@@ -142,15 +183,15 @@ public class RiemannReporter extends AbstractPollingReporter implements MetricPr
 
     public String service(String... parts) {
         final StringBuilder sb = new StringBuilder();
-        if (null != prefix) {
-            sb.append(prefix).append(separator);
+        if (null != c.prefix) {
+            sb.append(c.prefix).append(c.separator);
         }
 
         for (String p : parts) {
-            sb.append(p).append(separator);
+            sb.append(p).append(c.separator);
         }
 
-        return sb.substring(0, sb.length() - separator.length());
+        return sb.substring(0, sb.length() - c.separator.length());
     }
 
     @Override
@@ -203,21 +244,21 @@ public class RiemannReporter extends AbstractPollingReporter implements MetricPr
     }
 
     protected void sendVMMetrics(long epoch) {
-        newEvent().time(epoch).service(service("jvm", "memory", "heap-usage")).metric(vm.heapUsage()).send();
-        newEvent().time(epoch).service(service("jvm", "memory", "non-heap-usage")).metric(vm.nonHeapUsage()).send();
-        for (Entry<String, Double> pool : vm.memoryPoolUsage().entrySet()) {
+        newEvent().time(epoch).service(service("jvm", "memory", "heap-usage")).metric(c.vm.heapUsage()).send();
+        newEvent().time(epoch).service(service("jvm", "memory", "non-heap-usage")).metric(c.vm.nonHeapUsage()).send();
+        for (Entry<String, Double> pool : c.vm.memoryPoolUsage().entrySet()) {
             newEvent().time(epoch).service(service("jvm", "memory", "pool-usage", pool.getKey())).metric(pool.getValue()).send();
         }
-        newEvent().time(epoch).service(service("jvm", "thread", "daemon-count")).metric(vm.daemonThreadCount()).send();
-        newEvent().time(epoch).service(service("jvm", "thread", "count")).metric(vm.threadCount()).send();
-        newEvent().time(epoch).service(service("jvm", "uptime")).metric(vm.uptime()).send();
-        newEvent().time(epoch).service(service("jvm", "fd-usage")).metric(vm.fileDescriptorUsage()).send();
+        newEvent().time(epoch).service(service("jvm", "thread", "daemon-count")).metric(c.vm.daemonThreadCount()).send();
+        newEvent().time(epoch).service(service("jvm", "thread", "count")).metric(c.vm.threadCount()).send();
+        newEvent().time(epoch).service(service("jvm", "uptime")).metric(c.vm.uptime()).send();
+        newEvent().time(epoch).service(service("jvm", "fd-usage")).metric(c.vm.fileDescriptorUsage()).send();
 
-        for(Entry<Thread.State, Double> entry : vm.threadStatePercentages().entrySet()) {
+        for(Entry<Thread.State, Double> entry : c.vm.threadStatePercentages().entrySet()) {
             newEvent().time(epoch).service(service("jvm", "thread", "state", entry.getKey().toString().toLowerCase())).metric(entry.getValue()).send();
         }
 
-        for(Entry<String, VirtualMachineMetrics.GarbageCollectorStats> entry : vm.garbageCollectors().entrySet()) {
+        for(Entry<String, VirtualMachineMetrics.GarbageCollectorStats> entry : c.vm.garbageCollectors().entrySet()) {
             newEvent().time(epoch).service(service("jvm", "gc", entry.getKey(), "time")).metric(entry.getValue().getTime(TimeUnit.MILLISECONDS)).send();
             newEvent().time(epoch).service(service("jvm", "gc", entry.getKey(), "runs")).metric(entry.getValue().getRuns()).send();
         }
