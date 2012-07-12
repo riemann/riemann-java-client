@@ -7,6 +7,8 @@ import java.net.UnknownHostException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Arrays;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 import com.aphyr.riemann.Proto.Event;
 import com.aphyr.riemann.Proto.Query;
@@ -17,6 +19,7 @@ public abstract class AbstractRiemannClient {
   public static final int DEFAULT_PORT = 5555;
 
   protected final InetSocketAddress server;
+  protected RiemannScheduler scheduler = null;
 
   public AbstractRiemannClient(final InetSocketAddress server) {
     this.server = server;
@@ -108,6 +111,25 @@ public abstract class AbstractRiemannClient {
   public abstract void connect() throws IOException;
 
   public abstract void disconnect() throws IOException;
+
+  // Returns the scheduler for this client. Creates the scheduler on first use.
+  public synchronized RiemannScheduler scheduler() {
+      if (scheduler == null) {
+          scheduler = new RiemannScheduler(this);
+      }
+      return scheduler;
+  }
+
+  // Set up recurring tasks on this client's scheduler.
+  // This may be the lowest entropy for any code I've ever written.
+  public ScheduledFuture every(long interval, Runnable f) { return scheduler().every(interval, f); }
+  public ScheduledFuture every(long interval, RiemannScheduler.Task f) { return scheduler().every(interval, f); }
+  public ScheduledFuture every(long interval, TimeUnit unit, Runnable f) { return scheduler().every(interval, unit, f); }
+  public ScheduledFuture every(long interval, TimeUnit unit, RiemannScheduler.Task f) { return scheduler().every(interval, unit, f); }
+  public ScheduledFuture every(long interval, long delay, Runnable f) { return scheduler().every(interval, delay, f); }
+  public ScheduledFuture every(long interval, long delay, RiemannScheduler.Task f) { return scheduler().every(interval, delay, f); }
+  public ScheduledFuture every(long interval, long delay, TimeUnit unit, Runnable f) { return scheduler().every(interval, delay, unit, f); }
+  public ScheduledFuture every(long interval, long delay, TimeUnit unit, RiemannScheduler.Task f) { return scheduler().every(interval, delay, unit, f); }
 
   // Asserts that the message is OK; if not, throws a ServerError.
   public Msg validate(Msg message) throws IOException, ServerError {
