@@ -19,7 +19,7 @@
 		<dependency>
 			<groupId>com.google.protobuf</groupId>
 			<artifactId>protobuf-java</artifactId>
-			<version>2.3.0</version>
+			<version>2.4.1</version>
 			<scope>compile</scope>
 		</dependency>
 		<!-- TEST DEP's -->
@@ -93,15 +93,9 @@
     </build>
 
     <distributionManagement>
-        <repository>
-            <id>maven.boundary.com</id>
-            <name>maven.boundary.com-releases</name>
-            <url>http://maven.boundary.com/artifactory/external</url>
-        </repository>
-        <snapshotRepository>
-            <id>maven.boundary.com</id>
-            <name>maven.boundary.com-snapshots</name>
-            <url>http://maven.boundary.com/artifactory/external</url>
-        </snapshotRepository>
+      <repository>
+        <id>clojars.org</id>
+        <url>http://clojars.org/repo</url>
+      </repository>
     </distributionManagement>
 </project>
