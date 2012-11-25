@@ -95,7 +95,8 @@
     <distributionManagement>
       <repository>
         <id>clojars.org</id>
-        <url>http://clojars.org/repo</url>
+        <name>Clojars</name>
+        <url>https://clojars.org/repo</url>
       </repository>
     </distributionManagement>
 </project>
