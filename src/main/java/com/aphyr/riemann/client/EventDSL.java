@@ -85,25 +85,25 @@ public class EventDSL {
 
     public EventDSL metric(byte metric) {
       builder.setMetricSint64((long) metric);
-      builder.setMetricF((float) metric)
+      builder.setMetricF((float) metric);
       return this;
     }
 
     public EventDSL metric(short metric) {
       builder.setMetricSint64((long) metric);
-        builder.setMetricF((float) metric)
+        builder.setMetricF((float) metric);
       return this;
     }
 
     public EventDSL metric(int metric) {
         builder.setMetricSint64((long) metric);
-        builder.setMetricF((float) metric)
+        builder.setMetricF((float) metric);
         return this;
     }
 
     public EventDSL metric(long metric) {
         builder.setMetricSint64(metric);
-        builder.setMetricF((float) metric)
+        builder.setMetricF((float) metric);
         return this;
     }
 
@@ -114,7 +114,7 @@ public class EventDSL {
 
     public EventDSL metric(double metric) {
         builder.setMetricD(metric);
-        builder.setMetricF((float) metric)
+        builder.setMetricF((float) metric);
         return this;
     }
 
