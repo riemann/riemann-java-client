@@ -16,8 +16,8 @@ public class EventDSL {
         try {
             this.builder.setHost(java.net.InetAddress.getLocalHost().getHostName());
         } catch (java.net.UnknownHostException e) {
-            // If we can't get the local host, a null host is perfectly acceptable.
-            // Caller will know soon enough. :)
+            // If we can't get the local host, a null host is perfectly
+            // acceptable.  Caller will know soon enough. :)
         }
     }
 
@@ -81,23 +81,33 @@ public class EventDSL {
         return this;
     }
 
-    public EventDSL metric(float metric) {
-        builder.setMetricF(metric);
-        return this;
+    public EventDSL metric(byte metric) {
+      builder.setMetricSint64((long) metric);
+      return this;
+    }
+
+    public EventDSL metric(short metric) {
+      builder.setMetricSint64((long) metric);
+      return this;
     }
 
     public EventDSL metric(int metric) {
-        builder.setMetricF((float) metric);
+        builder.setMetricSint64((long) metric);
         return this;
     }
 
     public EventDSL metric(long metric) {
-        builder.setMetricF((float) metric);
+        builder.setMetricSint64(metric);
         return this;
     }
 
+    public EventDSL metric(float metric) {
+      builder.setMetricF(metric);
+      return this;
+    }
+
     public EventDSL metric(double metric) {
-        builder.setMetricF((float) metric);
+        builder.setMetricD(metric);
         return this;
     }
 

@@ -10,7 +10,6 @@ message State {
   optional bool once = 6;
   repeated string tags = 7;
   optional float ttl = 8;
-  optional float metric_f = 15;
 }
 
 message Event {
@@ -21,7 +20,12 @@ message Event {
   optional string description = 5;
   repeated string tags = 7;
   optional float ttl = 8;
+
+  optional sint64 metric_sint64 = 13;
+  optional double metric_d = 14;
   optional float metric_f = 15;
+  // Twos-complement big-endian byte representation of a signed integer.
+  optional bytes metric_bigint = 16;
 }
 
 message Query {
