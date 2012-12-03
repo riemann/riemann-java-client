@@ -4,7 +4,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.aphyr</groupId>
 	<artifactId>riemann-java-client</artifactId>
-	<version>0.0.5</version>
+	<version>0.0.6-SNAPSHOT</version>
 	<packaging>jar</packaging>
 	<name>Riemann Java Client</name>
 	<description>Java client for http://aphyr.github.com/riemann/</description>
