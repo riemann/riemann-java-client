@@ -15,6 +15,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import com.aphyr.riemann.Proto.Attribute;
 import com.aphyr.riemann.Proto.Event;
 import com.aphyr.riemann.Proto.Msg;
 
@@ -85,6 +86,7 @@ public abstract class AbstractClientTest {
 				.setTtl(random.nextInt(1000))
 				.setMetricF(random.nextInt(1000))
 				.addAllTags(Arrays.asList("tag1", "tag2"))
+				.addAttributes(Attribute.newBuilder().setName("key1").setValue("value1"))
 				.build();
 	}
 
@@ -99,5 +101,6 @@ public abstract class AbstractClientTest {
 		assertEquals(sent.getTime(), parsed.getTime(), 0);
 		assertEquals(sent.getTtl(), parsed.getTtl(), 0);
 		assertEquals(sent.getTagsList(), parsed.getTagsList());
+		assertEquals(sent.getAttributesList(), parsed.getAttributesList());
 	}
 }

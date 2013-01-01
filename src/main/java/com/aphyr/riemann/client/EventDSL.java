@@ -1,9 +1,11 @@
 package com.aphyr.riemann.client;
 
+import com.aphyr.riemann.Proto.Attribute;
 import com.aphyr.riemann.Proto.Event;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.io.IOException;
 
 public class EventDSL {
@@ -140,6 +142,24 @@ public class EventDSL {
 
     public EventDSL ttl(float ttl) {
         builder.setTtl(ttl);
+        return this;
+    }
+
+    public EventDSL attribute(String name, String value) {
+        Attribute.Builder attribBuilder = Attribute.newBuilder();
+        attribBuilder.setName(name);
+        attribBuilder.setValue(value);
+        builder.addAttributes(attribBuilder);
+        return this;
+    }
+
+    public EventDSL attributes(Map<String, String> attributes) {
+        for (Map.Entry<String, String> entry : attributes.entrySet()) {
+            Attribute.Builder attribBuilder = Attribute.newBuilder();
+            attribBuilder.setName(entry.getKey());
+            attribBuilder.setValue(entry.getValue());
+            builder.addAttributes(attribBuilder);
+        }
         return this;
     }
 
