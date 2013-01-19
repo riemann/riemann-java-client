@@ -145,9 +145,9 @@ public class EventDSL {
         return this;
     }
 
-    public EventDSL attribute(String name, String value) {
+    public EventDSL attribute(String key, String value) {
         Attribute.Builder attribBuilder = Attribute.newBuilder();
-        attribBuilder.setName(name);
+        attribBuilder.setKey(key);
         attribBuilder.setValue(value);
         builder.addAttributes(attribBuilder);
         return this;
@@ -156,7 +156,7 @@ public class EventDSL {
     public EventDSL attributes(Map<String, String> attributes) {
         for (Map.Entry<String, String> entry : attributes.entrySet()) {
             Attribute.Builder attribBuilder = Attribute.newBuilder();
-            attribBuilder.setName(entry.getKey());
+            attribBuilder.setKey(entry.getKey());
             attribBuilder.setValue(entry.getValue());
             builder.addAttributes(attribBuilder);
         }

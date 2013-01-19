@@ -86,7 +86,7 @@ public abstract class AbstractClientTest {
 				.setTtl(random.nextInt(1000))
 				.setMetricF(random.nextInt(1000))
 				.addAllTags(Arrays.asList("tag1", "tag2"))
-				.addAttributes(Attribute.newBuilder().setName("key1").setValue("value1"))
+				.addAttributes(Attribute.newBuilder().setKey("key1").setValue("value1"))
 				.build();
 	}
 
