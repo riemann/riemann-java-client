@@ -162,7 +162,7 @@ public class EventDSL {
     public Event build() {
       for (Map.Entry<String, String> entry : attributes.entrySet()) {
         Attribute.Builder attribBuilder = Attribute.newBuilder();
-        attribBuilder.setName(entry.getKey());
+        attribBuilder.setKey(entry.getKey());
         attribBuilder.setValue(entry.getValue());
         builder.addAttributes(attribBuilder);
       }
