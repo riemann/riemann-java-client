@@ -6,11 +6,13 @@ import com.aphyr.riemann.Proto.Event;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 import java.io.IOException;
 
 public class EventDSL {
     public final AbstractRiemannClient client;
     public final Event.Builder builder;
+    public final Map<String, String> attributes = new HashMap<String, String>();
 
     public EventDSL(AbstractRiemannClient client) {
         this.client = client;
@@ -146,28 +148,32 @@ public class EventDSL {
     }
 
     public EventDSL attribute(String name, String value) {
-        Attribute.Builder attribBuilder = Attribute.newBuilder();
-        attribBuilder.setName(name);
-        attribBuilder.setValue(value);
-        builder.addAttributes(attribBuilder);
-        return this;
+      attributes.put(name, value);
+      return this;
     }
 
     public EventDSL attributes(Map<String, String> attributes) {
-        for (Map.Entry<String, String> entry : attributes.entrySet()) {
-            Attribute.Builder attribBuilder = Attribute.newBuilder();
-            attribBuilder.setName(entry.getKey());
-            attribBuilder.setValue(entry.getValue());
-            builder.addAttributes(attribBuilder);
-        }
-        return this;
+      attributes.putAll(attributes);
+      return this;
+    }
+
+    // Returns the compiled Protobuf event for this DSL. Merges in the custom
+    // attributes map. Can only be called safely once.
+    public Event build() {
+      for (Map.Entry<String, String> entry : attributes.entrySet()) {
+        Attribute.Builder attribBuilder = Attribute.newBuilder();
+        attribBuilder.setName(entry.getKey());
+        attribBuilder.setValue(entry.getValue());
+        builder.addAttributes(attribBuilder);
+      }
+      return builder.build();
     }
 
     public Boolean sendWithAck() throws IOException, ServerError, MsgTooLargeException {
-        return client.sendEventsWithAck(builder.build());
+        return client.sendEventsWithAck(build());
     }
 
     public void send() {
-        client.sendEvents(builder.build());
+        client.sendEvents(build());
     }
 }
