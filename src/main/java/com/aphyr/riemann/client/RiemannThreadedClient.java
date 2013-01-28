@@ -26,7 +26,7 @@ public class RiemannThreadedClient extends AbstractRiemannClient {
   public final long writeQueueTimeout = 10;
   public final long inflightQueueTimeout = 10;
   public final int writeCapacity = 100;
-  public final int inflightCapacity = 10;
+  public final int inflightCapacity = 100;
   public final long disconnectTimeout = 1000;
   public final long readPromiseTimeout = 5000;
 
@@ -179,7 +179,7 @@ public class RiemannThreadedClient extends AbstractRiemannClient {
           write();
         }
         // Drain queue
-        System.out.println("Draining writer...");
+//        System.out.println("Draining writer...");
         while (write()) { };
         writerLatch.countDown();
       }
@@ -204,7 +204,7 @@ public class RiemannThreadedClient extends AbstractRiemannClient {
           read();
         }
         // Drain queue
-        System.out.println("Draining reader...");
+//        System.out.println("Draining reader...");
         while (read()) { };
         readerLatch.countDown();
       }
@@ -216,40 +216,40 @@ public class RiemannThreadedClient extends AbstractRiemannClient {
   // Gracefully stop the writer. Blocks.
   public synchronized RiemannThreadedClient stopWriter() throws
     InterruptedException {
-      System.out.println("Stop writer...");
+//      System.out.println("Stop writer...");
     if (writerRunning.compareAndSet(true, false)) {
       writerLatch.await();
     }
-    System.out.println("Writer stopped.");
+//    System.out.println("Writer stopped.");
     return this;
   }
 
   // Gracefully stop the reader. Blocks.
   public synchronized RiemannThreadedClient stopReader() throws
     InterruptedException {
-    System.out.println("Stop reader...");
+//    System.out.println("Stop reader...");
     if (readerRunning.compareAndSet(true, false)) {
       readerLatch.await();
     }
-    System.out.println("Reader stopped.");
+//    System.out.println("Reader stopped.");
     return this;
   }
 
   // Start both threads. Blocks.
   public synchronized RiemannThreadedClient start() {
-    System.out.println("Starting...");
+//    System.out.println("Starting...");
     startReader();
     startWriter();
-    System.out.println("Started.");
+//    System.out.println("Started.");
     return this;
   }
 
   // Stop both threads. Blocks.
   public synchronized RiemannThreadedClient stop() throws InterruptedException {
-    System.out.println("Stopping...");
+//    System.out.println("Stopping...");
     stopWriter();
     stopReader();
-    System.out.println("Stopped.");
+//    System.out.println("Stopped.");
     return this;
   }
 
