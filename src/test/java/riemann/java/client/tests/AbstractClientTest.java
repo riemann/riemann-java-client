@@ -69,7 +69,7 @@ public abstract class AbstractClientTest {
 				client.disconnect();
 				compareEvents(sent, this.received.get());
 			} else {
-				fail("Timed out witing for server to receive message");
+				fail("Timed out waiting for server to receive message");
 			}
 		} else {
 			fail("Timed out waiting for server to start");
