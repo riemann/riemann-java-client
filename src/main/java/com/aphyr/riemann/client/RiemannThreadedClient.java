@@ -85,7 +85,9 @@ public class RiemannThreadedClient extends AbstractRiemannClient {
 
   @Override
   public boolean isConnected() {
-    return client.isConnected();
+    return client.isConnected() && 
+      writerRunning.get() && 
+      readerRunning.get();
   }
 
   @Override
@@ -183,7 +185,7 @@ public class RiemannThreadedClient extends AbstractRiemannClient {
         while (write()) { };
         writerLatch.countDown();
       }
-    }).start();
+    }, "riemann-threaded-client-writer").start();
 
     return this;
   }
@@ -208,7 +210,7 @@ public class RiemannThreadedClient extends AbstractRiemannClient {
         while (read()) { };
         readerLatch.countDown();
       }
-    }).start();
+    }, "riemann-threaded-client-reader").start();
 
     return this;
   }
