@@ -96,4 +96,11 @@ public class RiemannTcpClient extends AbstractRiemannClient {
             this.socket.close();
         }
     }
+
+    public void reconnect() throws IOException {
+      synchronized(socketLock) {
+        disconnect();
+        reconnect();
+      }
+    }
 }

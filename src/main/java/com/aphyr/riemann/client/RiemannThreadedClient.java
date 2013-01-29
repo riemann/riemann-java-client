@@ -5,6 +5,7 @@ import com.aphyr.riemann.Proto.Event;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.TimeUnit;
 import java.lang.Thread;
 import java.lang.Runnable;
@@ -14,6 +15,10 @@ import java.net.UnknownHostException;
 // An asynchronous, nonblocking, mostly lockfree wrapper around a TcpClient.  N
 // threads may freely submit messages to this client; they are enqueued and
 // processed by a pair of sender/receiver threads.
+//
+// When the underlying client fails, queued and inflight writes and reads fail
+// ASAP. The reader and writer will try to negotiate an asynchronous reconnect
+// of the client.
 public class RiemannThreadedClient extends AbstractRiemannClient {
   public final RiemannTcpClient client;
   public final LinkedBlockingQueue<Write> writes;
@@ -22,13 +27,22 @@ public class RiemannThreadedClient extends AbstractRiemannClient {
   public final AtomicBoolean readerRunning = new AtomicBoolean(false);
   public CountDownLatch writerLatch;
   public CountDownLatch readerLatch;
-  
+  public final AtomicBoolean reconnecting = new AtomicBoolean(false);
+  public final AtomicLong lastReconnectionAttempt = new AtomicLong(0);
+ 
+  // What's the maximum time the writer can block waiting for the write queue?
   public final long writeQueueTimeout = 10;
+  // What's the maximum time the reader can block waiting for inflight writes
+  // to read?
   public final long inflightQueueTimeout = 10;
+  // How many writes can we queue before blocking?
   public final int writeCapacity = 100;
+  // How many writes can we have on the wire at any point?
   public final int inflightCapacity = 100;
-  public final long disconnectTimeout = 1000;
+  // How long can sendRecvMessage wait for a response before giving up?
   public final long readPromiseTimeout = 5000;
+  // How frequently can we try to reconnect?
+  public final long reconnectInterval = 1000;
 
   public RiemannThreadedClient(RiemannTcpClient client) throws UnknownHostException {
     this.client = client;
@@ -68,12 +82,19 @@ public class RiemannThreadedClient extends AbstractRiemannClient {
   // message.
   @Override
   public Msg sendRecvMessage(Msg message) throws IOException {
-    final Msg response = sendAsyncMessage(message).await(readPromiseTimeout,
-        TimeUnit.MILLISECONDS);
-    if (response == null) {
-      throw new RuntimeException("Timed out waiting for response promise.");
-    } else {
+    try {
+      final Msg response = sendAsyncMessage(message).await(readPromiseTimeout,
+          TimeUnit.MILLISECONDS);
+      if (response == null) {
+        throw new IOException("Timed out waiting for response promise.");
+      }
       return response;
+    } catch (RuntimeException e) {
+      // Extract IOExceptions from the promise.
+      if (e.getCause() instanceof IOException) {
+        throw (IOException) e.getCause();
+      }
+      throw e;
     }
   }
 
@@ -92,12 +113,14 @@ public class RiemannThreadedClient extends AbstractRiemannClient {
 
   @Override
   public synchronized void connect() throws IOException {
+    System.out.println("Connecting...");
     client.connect();
     start();
   }
 
   @Override
   public synchronized void disconnect() throws IOException {
+    System.out.println("Disconnecting...");
     try {
       stop();
     } catch (InterruptedException e) {
@@ -105,6 +128,62 @@ public class RiemannThreadedClient extends AbstractRiemannClient {
     } finally {
       client.disconnect();
     }
+  }
+
+  public void doReconnect() throws IOException {
+    try {
+      synchronized(this) {
+        try {
+          disconnect();
+          connect();
+        } finally {
+          // Even if connecting fails, we start up the reader & writer again.
+          start();
+        }
+      }
+    } finally {
+      reconnecting.set(false);
+    }
+  }
+
+  // Attempts to reconnect. Can be called frequently; will only
+  // try reconnecting every few seconds. If another thread is reconnecting, or
+  // a connection attempt was made too recently, returns immediately. If block
+  // is true, blocks until reconnection complete. If block is false, reconnects
+  // in a thread.
+  public void reconnect(boolean block) throws IOException {
+    if (!reconnecting.compareAndSet(false, true)) {
+      // Someone else is reconnecting.
+      return;
+    }
+
+    final long now = System.currentTimeMillis();
+    if ((now - lastReconnectionAttempt.get()) < reconnectInterval) {
+      // Not time to reconnect yet.
+     reconnecting.set(false);
+     return;
+    }
+    lastReconnectionAttempt.set(now);
+
+    
+    if (block) {
+      doReconnect();
+    } else {
+      new Thread(new Runnable() {
+        public void run() {
+          try {
+            doReconnect();
+          } catch (IOException e) {
+            // These exceptions will show up soon enough on sends.
+            // e.printStackTrace();
+          }
+        }
+      }, "riemann-threaded-client-reconnect").start();
+    }
+  }
+
+  public void reconnect() throws IOException {
+    reconnect(true);
   }
 
   // Pulls a Write off the writes queue, writes it to the socket, and
@@ -117,22 +196,24 @@ public class RiemannThreadedClient extends AbstractRiemannClient {
         return false;
       } else {
         try {
-//          System.out.println("Writing " + write.message.toString());
+          System.out.println("Writing " + write.message.toString());
           client.sendMessage(write.message);
           // Inflight queue will block us until the reader has caught up
-//          System.out.println("Written.");
+          System.out.println("Written.");
           inflight.put(write);
-//          System.out.println("Enqueued inflight");
+          System.out.println("Enqueued inflight");
           return true;
         } catch (RuntimeException e) {
           write.promise.deliver(e);
           return false;
         } catch (Throwable t) {
           write.promise.deliver(new RuntimeException(t));
+          reconnect(false);
           return false;
         }
       }
     } catch (Throwable t) {
+      // Queue is fucked. Welp.
       t.printStackTrace();
       return false;
     }
@@ -148,15 +229,16 @@ public class RiemannThreadedClient extends AbstractRiemannClient {
         return false;
       } else {
         try {
-//          System.out.println("Awaiting " + write.message.toString());
+          System.out.println("Awaiting " + write.message.toString());
           write.promise.deliver(client.recvMessage());
-//          System.out.println("Delivered.");
+          System.out.println("Delivered.");
           return true;
         } catch (RuntimeException e) {
           write.promise.deliver(e);
           return false;
         } catch (Throwable t) {
           write.promise.deliver(new RuntimeException(t));
+          reconnect(false);
           return false;
         }
       }
@@ -168,12 +250,10 @@ public class RiemannThreadedClient extends AbstractRiemannClient {
 
   // Start writing messages to the client.
   public synchronized RiemannThreadedClient startWriter() {
-    if (writerRunning.get()) {
+    if (!writerRunning.compareAndSet(false, true)) {
       return this;
     }
-
     writerLatch = new CountDownLatch(1);
-    writerRunning.set(true);
 
     new Thread(new Runnable() {
       public void run() {
@@ -181,7 +261,7 @@ public class RiemannThreadedClient extends AbstractRiemannClient {
           write();
         }
         // Drain queue
-//        System.out.println("Draining writer...");
+        System.out.println("Draining writer...");
         while (write()) { };
         writerLatch.countDown();
       }
@@ -192,12 +272,10 @@ public class RiemannThreadedClient extends AbstractRiemannClient {
 
   // Start reading responses from the client.
   public synchronized RiemannThreadedClient startReader() {
-    if (readerRunning.get()) {
+    if (!readerRunning.compareAndSet(false, true)) {
       return this;
     }
-
     readerLatch = new CountDownLatch(1);
-    readerRunning.set(true);
 
     new Thread(new Runnable() {
       public void run() {
@@ -206,7 +284,7 @@ public class RiemannThreadedClient extends AbstractRiemannClient {
           read();
         }
         // Drain queue
-//        System.out.println("Draining reader...");
+        System.out.println("Draining reader...");
         while (read()) { };
         readerLatch.countDown();
       }
@@ -215,43 +293,43 @@ public class RiemannThreadedClient extends AbstractRiemannClient {
     return this;
   }
 
-  // Gracefully stop the writer. Blocks.
+  // Gracefully stop the writer. Blocks until thread is stopped..
   public synchronized RiemannThreadedClient stopWriter() throws
     InterruptedException {
-//      System.out.println("Stop writer...");
+      System.out.println("Stop writer...");
     if (writerRunning.compareAndSet(true, false)) {
       writerLatch.await();
     }
-//    System.out.println("Writer stopped.");
+    System.out.println("Writer stopped.");
     return this;
   }
 
-  // Gracefully stop the reader. Blocks.
+  // Gracefully stop the reader. Blocks until thread is stopped.
   public synchronized RiemannThreadedClient stopReader() throws
     InterruptedException {
-//    System.out.println("Stop reader...");
+    System.out.println("Stop reader...");
     if (readerRunning.compareAndSet(true, false)) {
       readerLatch.await();
     }
-//    System.out.println("Reader stopped.");
+    System.out.println("Reader stopped.");
     return this;
   }
 
-  // Start both threads. Blocks.
+  // Start both threads. Blocks until threads are started.
   public synchronized RiemannThreadedClient start() {
-//    System.out.println("Starting...");
+    System.out.println("Starting...");
     startReader();
     startWriter();
-//    System.out.println("Started.");
+    System.out.println("Started.");
     return this;
   }
 
   // Stop both threads. Blocks.
   public synchronized RiemannThreadedClient stop() throws InterruptedException {
-//    System.out.println("Stopping...");
+    System.out.println("Stopping...");
     stopWriter();
     stopReader();
-//    System.out.println("Stopped.");
+    System.out.println("Stopped.");
     return this;
   }
 

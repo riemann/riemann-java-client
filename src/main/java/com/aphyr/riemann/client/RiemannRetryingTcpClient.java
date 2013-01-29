@@ -43,7 +43,8 @@ public class RiemannRetryingTcpClient extends RiemannTcpClient {
         if (interval < 0)
             throw new IllegalArgumentException("Invalid interval time");
 
-        minimumReconnectInterval = interval * 1000; // receive in seconds, convert to ms
+        // receive in seconds, convert to ms
+        minimumReconnectInterval = interval * 1000; 
     }
 
     // Attempts to reconnect. Can be called many times; will only try
@@ -63,10 +64,7 @@ public class RiemannRetryingTcpClient extends RiemannTcpClient {
         }
 
         try {
-            synchronized (socketLock) {
-                disconnect();
-                connect();
-            }
+          super.reconnect();
         } finally {
             synchronized (reconnectionLock) {
                 reconnecting = false;
