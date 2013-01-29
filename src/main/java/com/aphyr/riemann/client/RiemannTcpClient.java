@@ -36,6 +36,9 @@ public class RiemannTcpClient extends AbstractRiemannClient {
         if (message == null) {
             throw new IllegalArgumentException("Null message");
         }
+        if (out == null) {
+          throw new IOException("No connection to " + super.server.toString());
+        }
         out.writeInt(message.getSerializedSize());
         message.writeTo(out);
         out.flush();
@@ -91,9 +94,15 @@ public class RiemannTcpClient extends AbstractRiemannClient {
     @Override
     public void disconnect() throws IOException {
         synchronized (socketLock) {
+          if (this.out != null) {
             this.out.close();
+          }
+          if (this.in != null) {
             this.in.close();
+          }
+          if (this.socket != null) {
             this.socket.close();
+          }
         }
     }
 

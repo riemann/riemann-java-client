@@ -16,9 +16,15 @@ import java.net.UnknownHostException;
 // threads may freely submit messages to this client; they are enqueued and
 // processed by a pair of sender/receiver threads.
 //
-// When the underlying client fails, queued and inflight writes and reads fail
-// ASAP. The reader and writer will try to negotiate an asynchronous reconnect
-// of the client.
+// FAILURE MODES
+//
+// Creating a RiemannThreadedClient, like a RiemannTcpClient, should always
+// succeed. No IO happens until you call connect(). Connect may fail, but
+// you're free to ignore it. A running RiemannThreadedClient will respond to
+// failures by automatically attempting to reconnect periodically, so long as
+// messages are being sent. Reconnections are asynchronous; many writes can
+// fail while a reconnection is in process. This class aims to expose failures
+// as quickly as possible to higher levels.
 public class RiemannThreadedClient extends AbstractRiemannClient {
   public final RiemannTcpClient client;
   public final LinkedBlockingQueue<Write> writes;
@@ -113,9 +119,9 @@ public class RiemannThreadedClient extends AbstractRiemannClient {
 
   @Override
   public synchronized void connect() throws IOException {
+    start();
     System.out.println("Connecting...");
     client.connect();
-    start();
   }
 
   @Override
