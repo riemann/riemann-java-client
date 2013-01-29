@@ -36,28 +36,33 @@ public abstract class AbstractRiemannClient {
   public EventDSL event() {
     return new EventDSL(this);
   }
+  
+  // Sends events and checks the server's response. Will throw IOException for
+  // network failures, ServerError for error responses from Riemann. Returns
+  // true if events acknowledged.
+  public Boolean sendEventsWithAck(final List<Event> events) throws IOException, ServerError, MsgTooLargeException {
+    validate(
+        sendRecvMessage(
+          Msg.newBuilder()
+          .addAllEvents(events)
+          .build()));
+    return true;
+  }
 
   // Sends events and checks the server's response. Will throw IOException for
   // network failures, ServerError for error responses from Riemann. Returns
   // true if events acknowledged.
   public Boolean sendEventsWithAck(final Event... events) throws IOException, ServerError, MsgTooLargeException {
-    validate(
-        sendRecvMessage(
-          Msg.newBuilder()
-            .addAllEvents(Arrays.asList(events))
-            .build()
-        )
-    );
-    return true;
+    return sendEventsWithAck(Arrays.asList(events));
   }
 
   // Sends events in fire-and-forget fashion. Doesn't check server response,
   // swallows all exceptions silently. No guarantees on delivery.
-  public void sendEvents(final Event... events) {
+  public void sendEvents(final List<Event> events) {
     try {
       sendMaybeRecvMessage(
          Msg.newBuilder()
-          .addAllEvents(Arrays.asList(events))
+          .addAllEvents(events)
           .build()
       );
     } catch (IOException e) {
@@ -65,6 +70,12 @@ public abstract class AbstractRiemannClient {
     } catch (MsgTooLargeException e) {
       // Similarly.
     }
+  }
+
+  // Sends events in fire-and-forget fashion. Doesn't check server response,
+  // swallows all exceptions silently. No guarantees on delivery.
+  public void sendEvents(final Event... events) {
+    sendEvents(Arrays.asList(events));
   }
 
   // Send an Exception event, with state "error" and tagged

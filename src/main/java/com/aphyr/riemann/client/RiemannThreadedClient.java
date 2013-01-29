@@ -343,7 +343,7 @@ public class RiemannThreadedClient extends AbstractRiemannClient {
     return this;
   }
 
-  // Combines an event with a promise to fulfill when received.
+  // Combines a message with a promise to fulfill when received.
   public class Write {
     public final Msg message;
     public final Promise<Msg> promise = new Promise<Msg>();
