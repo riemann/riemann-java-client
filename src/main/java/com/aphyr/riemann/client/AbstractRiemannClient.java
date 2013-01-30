@@ -123,6 +123,13 @@ public abstract class AbstractRiemannClient {
 
   public abstract void disconnect() throws IOException;
 
+  public void reconnect() throws IOException {
+    synchronized(this) {
+      disconnect();
+      connect();
+    }
+  }
+
   // Returns the scheduler for this client. Creates the scheduler on first use.
   public synchronized RiemannScheduler scheduler() {
       if (scheduler == null) {

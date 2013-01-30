@@ -106,10 +106,12 @@ public class RiemannTcpClient extends AbstractRiemannClient {
         }
     }
 
+    @Override
     public void reconnect() throws IOException {
+      System.out.println("tcpclient reconnect");
       synchronized(socketLock) {
         disconnect();
-        reconnect();
+        connect();
       }
     }
 }

@@ -192,6 +192,7 @@ public class RiemannThreadedClient extends AbstractRiemannClient {
     }
   }
 
+  @Override
   public void reconnect() throws IOException {
     reconnect(true);
   }
