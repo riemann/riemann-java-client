@@ -65,7 +65,6 @@ public class RiemannRetryingTcpClient extends RiemannTcpClient {
         }
 
         try {
-          System.out.println("RetryingTcpClient reconnecting.");
           super.reconnect();
         } finally {
             synchronized (reconnectionLock) {
