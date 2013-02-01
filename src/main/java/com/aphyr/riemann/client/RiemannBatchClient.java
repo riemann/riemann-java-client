@@ -11,7 +11,7 @@ package com.aphyr.riemann.client;
 //
 // Note that Messages do not explain *which* events fail. Every event in a
 // message may raise an exception because of a problem with a single event.
-// There is no gaurantee as to *which* events were successfully received. Since
+// There is no guarantee as to *which* events were successfully received. Since
 // Riemann considers almost every event valid, and will only return failures in
 // the event of resource problems, this should be acceptable for most
 // scenarios. 
