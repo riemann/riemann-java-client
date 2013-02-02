@@ -21,7 +21,14 @@
 			<artifactId>protobuf-java</artifactId>
 			<version>2.4.1</version>
 			<scope>compile</scope>
-		</dependency>
+    </dependency>
+
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty</artifactId>
+      <version>3.6.1.Final</version>
+    </dependency>
+
 		<!-- TEST DEP's -->
 		<dependency>
 			<groupId>junit</groupId>

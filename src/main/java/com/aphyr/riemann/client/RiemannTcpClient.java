@@ -10,24 +10,26 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 
 public class RiemannTcpClient extends AbstractRiemannClient {
-    protected Socket socket;
-    protected final Object socketLock = new Object();
-    protected DataOutputStream out;
-    protected DataInputStream in;
+    public static final int DEFAULT_PORT = 5555;
+    public final InetSocketAddress server;
+    public Socket socket;
+    public final Object socketLock = new Object();
+    public DataOutputStream out;
+    public DataInputStream in;
 
     public static final int connectTimeout = 1000;
     public static final int readTimeout = 1000;
 
     public RiemannTcpClient() throws UnknownHostException {
-        super();
+      this(DEFAULT_PORT);
     }
 
     public RiemannTcpClient(int port) throws UnknownHostException {
-        super(port);
+      this(new InetSocketAddress(InetAddress.getLocalHost(), port));
     }
 
     public RiemannTcpClient(InetSocketAddress server) {
-        super(server);
+      this.server = server;
     }
 
     // This method is not synchronized.
@@ -70,6 +72,13 @@ public class RiemannTcpClient extends AbstractRiemannClient {
     @Override
     public Msg sendMaybeRecvMessage(Msg message) throws IOException {
         return sendRecvMessage(message);
+    }
+
+    @Override
+    public void flush() throws IOException {
+      if (this.socket != null) {
+        this.socket.flush();
+      }
     }
 
     @Override

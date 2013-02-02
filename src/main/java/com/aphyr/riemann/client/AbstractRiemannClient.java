@@ -4,35 +4,20 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
-import java.util.Collections;
-import java.util.List;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.List;
 
 import com.aphyr.riemann.Proto.Event;
 import com.aphyr.riemann.Proto.Query;
 import com.aphyr.riemann.Proto.Msg;
 
 public abstract class AbstractRiemannClient {
-
-  public static final int DEFAULT_PORT = 5555;
-
   protected final InetSocketAddress server;
   protected RiemannScheduler scheduler = null;
 
-  public AbstractRiemannClient(final InetSocketAddress server) {
-    this.server = server;
-  }
-
-  public AbstractRiemannClient(final int port) throws UnknownHostException {
-    this.server = new InetSocketAddress(InetAddress.getLocalHost(), port);
-  }
-
-  public AbstractRiemannClient() throws UnknownHostException {
-    this(new InetSocketAddress(InetAddress.getLocalHost(), DEFAULT_PORT));
-  }
- 
   public EventDSL event() {
     return new EventDSL(this);
   }
@@ -128,6 +113,10 @@ public abstract class AbstractRiemannClient {
       disconnect();
       connect();
     }
+  }
+
+  // Request that the client try to complete any buffered IO at this time.
+  public void flush() throws IOException {
   }
 
   // Returns the scheduler for this client. Creates the scheduler on first use.

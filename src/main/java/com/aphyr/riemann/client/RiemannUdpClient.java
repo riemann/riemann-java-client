@@ -1,20 +1,21 @@
 package com.aphyr.riemann.client;
 
+import com.aphyr.riemann.Proto.Msg;
 import java.io.IOException;
 import java.net.*;
-
-import com.aphyr.riemann.Proto.Msg;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 public class RiemannUdpClient extends AbstractRiemannClient {
-    protected static final int MAX_SIZE = 16384;
+    public static final int DEFAULT_PORT = 5555; 
+    public static final int MAX_SIZE = 16384;
+    public final InetSocketAddress server;
 
     public RiemannUdpClient() throws UnknownHostException {
-        super();
+      this(DEFAULT_PORT);
     }
 
     public RiemannUdpClient(int port) throws UnknownHostException {
-        super(port);
+       this(new InetSocketAddress(InetAddress.getLocalHost(), port));
     }
 
     public RiemannUdpClient(InetSocketAddress server) {
