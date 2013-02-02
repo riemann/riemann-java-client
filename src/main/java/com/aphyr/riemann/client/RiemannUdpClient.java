@@ -6,18 +6,18 @@ import java.net.*;
 import com.aphyr.riemann.Proto.Msg;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
-public class RiemannUDPClient extends AbstractRiemannClient {
+public class RiemannUdpClient extends AbstractRiemannClient {
     protected static final int MAX_SIZE = 16384;
 
-    public RiemannUDPClient() throws UnknownHostException {
+    public RiemannUdpClient() throws UnknownHostException {
         super();
     }
 
-    public RiemannUDPClient(int port) throws UnknownHostException {
+    public RiemannUdpClient(int port) throws UnknownHostException {
         super(port);
     }
 
-    public RiemannUDPClient(InetSocketAddress server) {
+    public RiemannUdpClient(InetSocketAddress server) {
         super(server);
     }
 
