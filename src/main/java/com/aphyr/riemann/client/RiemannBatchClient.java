@@ -30,19 +30,20 @@ package com.aphyr.riemann.client;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.LinkedTransferQueue;
+//import java.util.concurrent.LinkedTransferQueue;
+//import jsr166y.LinkedTransferQueue;
 import java.util.ArrayList;
 import java.util.List;
 import com.aphyr.riemann.Proto.Msg;
 import com.aphyr.riemann.Proto.Event;
+import com.aphyr.riemann.client.AbstractTransferQueue;
 import java.io.IOException;
 import java.net.UnknownHostException;
 
 public class RiemannBatchClient extends AbstractRiemannClient {
   public final int batchSize;
   public final AtomicInteger bufferSize = new AtomicInteger();
-  public final LinkedTransferQueue<Write> buffer = new
-    LinkedTransferQueue<Write>();
+  public final AbstractTransferQueue<Write> buffer;
   public final AbstractRiemannClient client;
 
   // Maximum time, in ms, we can wait for an event to be processed.
@@ -60,6 +61,23 @@ public class RiemannBatchClient extends AbstractRiemannClient {
       client) throws UnknownHostException {
     this.batchSize = batchSize;
     this.client = client;
+    Class<?> klass = null;
+    try {
+      klass = Class.forName("java.util.concurrent.LinkedTransferQueue");
+    } catch (ClassNotFoundException e) {
+      try {
+        klass = Class.forName("jsr166y.LinkedTransferQueue");
+      } catch (ClassNotFoundException e2) {
+        // You are fucked.
+      }
+    }
+    AbstractTransferQueue<Write> buffer;
+    try {
+      buffer = klass.asSubclass(AbstractTransferQueue.class).newInstance();
+    } catch (Exception e) {
+      buffer = null;
+    }
+    this.buffer = buffer;
   }
 
   // Fire and forget. No guarantees on delivery.
