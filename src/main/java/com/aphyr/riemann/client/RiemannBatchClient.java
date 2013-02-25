@@ -53,12 +53,12 @@ public class RiemannBatchClient extends AbstractRiemannClient {
   public final Promise<Boolean> blackhole = new Promise<Boolean>();
 
   public RiemannBatchClient(final AbstractRiemannClient client) throws
-    UnknownHostException {
+    UnknownHostException, UnsupportedJVMException {
     this(10, client);
   }
 
   public RiemannBatchClient(final int batchSize, final AbstractRiemannClient
-      client) throws UnknownHostException {
+      client) throws UnknownHostException, UnsupportedJVMException {
     this.batchSize = batchSize;
     this.client = client;
     Class<?> klass = null;
@@ -68,7 +68,7 @@ public class RiemannBatchClient extends AbstractRiemannClient {
       try {
         klass = Class.forName("jsr166y.LinkedTransferQueue");
       } catch (ClassNotFoundException e2) {
-        // You are fucked.
+        throw new UnsupportedJVMException();
       }
     }
     AbstractTransferQueue<Write> buffer;
