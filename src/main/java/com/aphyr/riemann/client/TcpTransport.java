@@ -77,54 +77,56 @@ public class TcpTransport implements AsynchronousTransport {
 
   @Override
   // Does nothing if not currently disconnected.
-  public void connect() throws IOException {
-    synchronized(this) {
-      if (state != State.DISCONNECTED) {
-        return;
-      };
-      state = State.CONNECTING;
+  public synchronized void connect() throws IOException {
+    if (state != State.DISCONNECTED) {
+      return;
+    };
+    state = State.CONNECTING;
 
-      // Set up channel factory
-      final ChannelFactory channelFactory = new NioClientSocketChannelFactory(
-          Executors.newCachedThreadPool(),
-          Executors.newCachedThreadPool());
+    // Set up channel factory
+    final ChannelFactory channelFactory = new NioClientSocketChannelFactory(
+        Executors.newCachedThreadPool(),
+        Executors.newCachedThreadPool());
 
-      // Create bootstrap
-      bootstrap = new ClientBootstrap(channelFactory);
+    // Create bootstrap
+    bootstrap = new ClientBootstrap(channelFactory);
 
-      // Set up pipeline factory.
-      bootstrap.setPipelineFactory(
-          new ChannelPipelineFactory() {
-            public ChannelPipeline getPipeline() {
-              final ChannelPipeline p = Channels.pipeline();
+    // Set up pipeline factory.
+    bootstrap.setPipelineFactory(
+        new ChannelPipelineFactory() {
+          public ChannelPipeline getPipeline() {
+            final ChannelPipeline p = Channels.pipeline();
 
-              p.addLast("frame-decoder", new LengthFieldBasedFrameDecoder(
-                  Integer.MAX_VALUE, 0, 4, 0, 4));
-              p.addLast("frame-encoder", frameEncoder);
-              p.addLast("protobuf-decoder", pbDecoder);
-              p.addLast("protobuf-encoder", pbEncoder);
-              p.addLast("handler", new TcpHandler(channels));
-              return p;
-            }});
+            p.addLast("frame-decoder", new LengthFieldBasedFrameDecoder(
+                Integer.MAX_VALUE, 0, 4, 0, 4));
+            p.addLast("frame-encoder", frameEncoder);
+            p.addLast("protobuf-decoder", pbDecoder);
+            p.addLast("protobuf-encoder", pbEncoder);
+            p.addLast("handler", new TcpHandler(channels));
+            return p;
+          }});
 
-      // Set bootstrap options
-      bootstrap.setOption("tcpNoDelay", true);
-      bootstrap.setOption("keepAlive", true);
+    // Set bootstrap options
+    bootstrap.setOption("tcpNoDelay", true);
+    bootstrap.setOption("keepAlive", true);
 
-      // Connect asynchronously
-      final ChannelFuture result = bootstrap.connect(address).awaitUninterruptibly();
-      if (! result.isSuccess()) {
-        state = State.DISCONNECTED;
-        throw new IOException("Connection failed", result.getCause());
-      }
-
-      state = State.CONNECTED;
+    // Connect asynchronously
+    final ChannelFuture result = bootstrap.connect(address).awaitUninterruptibly();
+    if (! result.isSuccess()) {
+      disconnect(true);
+      throw new IOException("Connection failed", result.getCause());
     }
+
+    state = State.CONNECTED;
   }
 
   @Override
-  public synchronized void disconnect() throws IOException {
-    if (! isConnected()) {
+  public void disconnect() throws IOException {
+    disconnect(false);
+  }
+
+  public synchronized void disconnect(boolean force) throws IOException {
+    if (!(force || isConnected())) {
       return;
     }
 

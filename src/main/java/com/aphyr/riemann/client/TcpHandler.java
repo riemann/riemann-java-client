@@ -113,8 +113,7 @@ public class TcpHandler extends SimpleChannelHandler {
     });
 
     // Send the message event downstream
-    ctx.sendDownstream(me);
-    // Channels.write(ctx, me.getFuture(), message).
+    Channels.write(ctx, me.getFuture(), message);
   }
 
   // When messages are received, deliver them to the next queued promise.

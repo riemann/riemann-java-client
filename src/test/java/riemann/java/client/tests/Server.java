@@ -4,7 +4,7 @@ import java.util.Arrays;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.net.*;
 import java.io.*;
 
@@ -17,6 +17,7 @@ public abstract class Server {
 	public int port;
 	public Thread thread;
   public ServerSocket serverSocket;
+  public LinkedBlockingQueue<Msg> received = new LinkedBlockingQueue<Msg>();
 
 	public InetSocketAddress start() throws IOException {
 		this.port = 9800 + new Random().nextInt(100);
@@ -42,27 +43,39 @@ public abstract class Server {
       public void run() {
         try {
           Socket sock = null;
-          OutputStream out = null;
+          DataOutputStream out = null;
           DataInputStream in = null;
-          byte[] data;
 
           try {
             // Accept connection
             while((sock = serverSocket.accept()) != null) {
               // Set up streams
-              out = sock.getOutputStream();
+              out = new DataOutputStream(sock.getOutputStream());
               in = new DataInputStream(sock.getInputStream());
 
               // Over each message
               while (true) {
                 // Read length
-                data = new byte[in.readInt()];
+                final int len = in.readInt();
+                
                 // Read message
+                final byte[] data = new byte[len];
                 in.readFully(data);
-                // Parse, handle, and write response
-                handle(Msg.parseFrom(data)).writeTo(out);
+                final Msg request = Msg.parseFrom(data);
+                
+                // Log request
+                received.put(request);
+
+                // Handle message
+                final Msg response = handle(request);
+                
+                // Write response
+                out.writeInt(response.getSerializedSize());
+                response.writeTo(out);
               }
             }
+          } catch (EOFException e) {
+            // Socket closed.
           } finally {
             if (out  != null) { out.close();  }
             if (in   != null) { in.close();   }

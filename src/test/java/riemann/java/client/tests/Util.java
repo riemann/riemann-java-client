@@ -23,17 +23,22 @@ public class Util {
 				.build();
 	}
 
-	public static void compareEvents(final Event sent, final Msg message) {
-		assertEquals(1, message.getEventsCount());
-		final Event parsed = message.getEvents(0);
-		assertEquals(sent.getHost(), parsed.getHost());
-		assertEquals(sent.getService(), parsed.getService());
-		assertEquals(sent.getState(), parsed.getState());
-		assertEquals(sent.getDescription(), parsed.getDescription());
-		assertEquals(sent.getMetricF(), parsed.getMetricF(), 0);
-		assertEquals(sent.getTime(), parsed.getTime(), 0);
-		assertEquals(sent.getTtl(), parsed.getTtl(), 0);
-		assertEquals(sent.getTagsList(), parsed.getTagsList());
-		assertEquals(sent.getAttributesList(), parsed.getAttributesList());
+  // Returns a single event from a message, asserting that it has only one
+  // event.
+  public static Event soleEvent(final Msg m) {
+    assertEquals(1, m.getEventsCount());
+    return m.getEvents(0);
+  }
+
+	public static void compareEvents(final Event e1, final Event e2) {
+		assertEquals(e1.getHost(), e2.getHost());
+		assertEquals(e1.getService(), e2.getService());
+		assertEquals(e1.getState(), e2.getState());
+		assertEquals(e1.getDescription(), e2.getDescription());
+		assertEquals(e1.getMetricF(), e2.getMetricF(), 0);
+		assertEquals(e1.getTime(), e2.getTime(), 0);
+		assertEquals(e1.getTtl(), e2.getTtl(), 0);
+		assertEquals(e1.getTagsList(), e2.getTagsList());
+		assertEquals(e1.getAttributesList(), e2.getAttributesList());
 	}
 }
