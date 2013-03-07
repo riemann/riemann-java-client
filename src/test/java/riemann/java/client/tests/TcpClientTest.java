@@ -1,55 +1,40 @@
 package riemann.java.client.tests;
 
-import java.io.DataInputStream;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+
 import java.io.IOException;
-import java.io.OutputStream;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.UnknownHostException;
+import java.util.Arrays;
+import java.util.Random;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import com.aphyr.riemann.client.RiemannClient;
+import com.aphyr.riemann.client.ServerError;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+
+import com.aphyr.riemann.Proto.Attribute;
+import com.aphyr.riemann.Proto.Event;
 import com.aphyr.riemann.Proto.Msg;
-import com.aphyr.riemann.client.AbstractRiemannClient;
-import com.aphyr.riemann.client.RiemannTcpClient;
 
-public class TcpClientTest extends AbstractClientTest {
-
-	@Override
-	Thread createServer(final int port, final AtomicReference<Msg> received) {
-		return new Thread() {
-			@Override
-			public void run() {
-				try {
-					final ServerSocket server = new ServerSocket(port);
-					serverStarted();
-					final Socket socket = server.accept();
-					received.set(receive(socket));
-					serverReceived();
-					send(socket);
-				} catch (Exception e) {
-					e.printStackTrace();
-				}
-			}
-
-			private void send(Socket socket) throws IOException {
-				final OutputStream out = socket.getOutputStream();
-				Msg.newBuilder().build().writeTo(out);
-				out.close();
-			}
-
-			private Msg receive(final Socket socket) throws IOException {
-				final DataInputStream input = new DataInputStream(socket.getInputStream());
-				final byte[] data = new byte[input.readInt()];
-				input.readFully(data);
-				return Msg.parseFrom(data);
-			}
-		};
-	}
-
-	@Override
-    AbstractRiemannClient createClient(int port) throws UnknownHostException {
-		return new RiemannTcpClient(new InetSocketAddress(InetAddress.getLocalHost(), port));
-	}
+public class TcpClientTest {
+	@Test
+	public void echoTest() throws IOException, InterruptedException, ServerError {
+    final Server server = new EchoServer();
+    RiemannClient client = null;
+    try {
+      client = RiemannClient.tcp(server.start());
+      client.connect();
+      final Event e = Util.createEvent();
+      assertEquals(true, client.sendEventsWithAck(e));
+    } finally {
+      if (client != null) {
+        client.disconnect();
+      }
+      server.stop();
+    }
+  }
 }

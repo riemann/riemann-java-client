@@ -1,6 +1,6 @@
 package com.aphyr.riemann.client;
 
-// Wraps any AbstractRiemann client for use in high-throughput loads. Behaves
+// Wraps any Riemann client for use in high-throughput loads. Behaves
 // exactly like the underlying client, except that calls to sendEvents and
 // sendEventsWithAck (including client.event()...send()), are
 // batched together into single messages for more efficient transfer.
@@ -64,8 +64,12 @@ public class RiemannBatchClient extends AbstractRiemannClient {
 
   // Fire and forget. No guarantees on delivery.
   public void sendEvents(final List<Event> events) {
-    for (Event event : events) {
-      queue(new Write(event, blackhole));
+    try {
+      for (Event event : events) {
+        queue(new Write(event, blackhole));
+      }
+    } catch (IOException e) {
+      // too bad
     }
   }
 
@@ -93,13 +97,8 @@ public class RiemannBatchClient extends AbstractRiemannClient {
           throw new IOException("Timed out waiting for response promise.");
         }
       } catch (RuntimeException e) {
-        // Extract IOExceptions
-        if (e.getCause() instanceof IOException) {
-          throw (IOException) e.getCause();
-        } else if (e.getCause() instanceof ServerError) {
+        if (e.getCause() instanceof ServerError) {
           throw (ServerError) e.getCause();
-        } else if (e.getCause() instanceof MsgTooLargeException) {
-          throw (MsgTooLargeException) e.getCause();
         }
         throw e;
       }
@@ -112,7 +111,7 @@ public class RiemannBatchClient extends AbstractRiemannClient {
   // And this is crazy
   // But take this event
   // And flush queues maybe
-  public void queue(final Write write) {
+  public void queue(final Write write) throws IOException {
     buffer.put(write);
     if (batchSize <= bufferSize.addAndGet(1)) {
       flush();
@@ -122,7 +121,7 @@ public class RiemannBatchClient extends AbstractRiemannClient {
   // Flushes up to batchSize writes from the queue, and fulfills their
   // promises. Should never throw; any exceptions go to the corresponding
   // promises.
-  public int flush() {
+  public int flush2() {
     final int maxWrites = Math.min(batchSize, bufferSize.get());
     // Allocate space for writes
     final ArrayList<Write> writes = new ArrayList<Write>(maxWrites);
@@ -163,22 +162,15 @@ public class RiemannBatchClient extends AbstractRiemannClient {
     return writes.size();
   }
 
-  public void sendMessage(final Msg message) throws IOException,
-         MsgTooLargeException {
-    client.sendMessage(message);
+  public void flush() throws IOException {
+    flush2();
   }
 
-  public Msg recvMessage() throws IOException {
-    return client.recvMessage();
-  }
-
-  public Msg sendRecvMessage(final Msg message) throws IOException,
-         MsgTooLargeException {
+  public Msg sendRecvMessage(final Msg message) throws IOException {
     return client.sendRecvMessage(message);
   }
 
-  public Msg sendMaybeRecvMessage(final Msg message) throws
-    IOException, MsgTooLargeException {
+  public Msg sendMaybeRecvMessage(final Msg message) throws IOException {
     return client.sendMaybeRecvMessage(message);
   }
 
@@ -196,6 +188,10 @@ public class RiemannBatchClient extends AbstractRiemannClient {
     } finally {
       client.disconnect();
     }
+  }
+
+  public void reconnect() throws IOException {
+    client.reconnect();
   }
 
   // Combines an Event with a promise to fulfill when received.

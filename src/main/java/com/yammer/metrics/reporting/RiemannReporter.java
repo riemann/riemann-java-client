@@ -117,7 +117,7 @@ public class RiemannReporter extends AbstractPollingReporter implements MetricPr
 
     public RiemannReporter(final Config c) throws IOException {
         super(c.metricsRegistry, c.name);
-        this.riemann = new RiemannClient(new InetSocketAddress(c.host, c.port));
+        this.riemann = RiemannClient.tcp(new InetSocketAddress(c.host, c.port));
         riemann.connect();
         this.c = c;
     }

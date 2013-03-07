@@ -15,13 +15,21 @@ import com.aphyr.riemann.Proto.Query;
 import com.aphyr.riemann.Proto.Msg;
 
 public abstract class AbstractRiemannClient {
-  protected final InetSocketAddress server;
-  protected RiemannScheduler scheduler = null;
+  protected volatile RiemannScheduler scheduler = null;
 
+  public abstract Msg sendRecvMessage(final Msg m) throws IOException;
+  public abstract Msg sendMaybeRecvMessage(final Msg m) throws IOException;
+  public abstract void connect() throws IOException;
+  public abstract boolean isConnected();
+  public abstract void disconnect() throws IOException;
+  public abstract void reconnect() throws IOException;
+  public abstract void flush() throws IOException;
+  
+  // A new event DSL bound to this client.
   public EventDSL event() {
     return new EventDSL(this);
   }
-  
+
   // Sends events and checks the server's response. Will throw IOException for
   // network failures, ServerError for error responses from Riemann. Returns
   // true if events acknowledged.
@@ -52,8 +60,6 @@ public abstract class AbstractRiemannClient {
       );
     } catch (IOException e) {
       // Fuck it.
-    } catch (MsgTooLargeException e) {
-      // Similarly.
     }
   }
 
@@ -92,31 +98,6 @@ public abstract class AbstractRiemannClient {
     validate(m);
 
     return Collections.unmodifiableList(m.getEventsList());
-  }
-
-  public abstract void sendMessage(Msg message) throws IOException, MsgTooLargeException;
-
-  public abstract Msg recvMessage() throws IOException;
-
-  public abstract Msg sendRecvMessage(Msg message) throws IOException, MsgTooLargeException;
-
-  public abstract Msg sendMaybeRecvMessage(Msg message) throws IOException, MsgTooLargeException;
-
-  public abstract boolean isConnected();
-
-  public abstract void connect() throws IOException;
-
-  public abstract void disconnect() throws IOException;
-
-  public void reconnect() throws IOException {
-    synchronized(this) {
-      disconnect();
-      connect();
-    }
-  }
-
-  // Request that the client try to complete any buffered IO at this time.
-  public void flush() throws IOException {
   }
 
   // Returns the scheduler for this client. Creates the scheduler on first use.

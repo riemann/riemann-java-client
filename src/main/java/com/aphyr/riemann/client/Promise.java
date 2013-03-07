@@ -3,6 +3,7 @@ package com.aphyr.riemann.client;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
+import java.io.IOException;
 
 public class Promise<T> {
   public final CountDownLatch latch = new CountDownLatch(1);
@@ -11,23 +12,19 @@ public class Promise<T> {
   public Promise() {
   }
 
-  public void deliver(T value) {
+  public void deliver(Object value) {
     if (0 < latch.getCount() && ref.compareAndSet(latch, value)) {
       latch.countDown();
     }
   }
 
-  public void deliver(RuntimeException e) {
-    if (0 < latch.getCount() && ref.compareAndSet(latch, e)) {
-      latch.countDown();
-    }
-  }
-
-  public T await() {
+  public T await() throws IOException {
     try {
       latch.await();
       final Object value = ref.get();
-      if (value instanceof RuntimeException) {
+      if (value instanceof IOException) {
+        throw (IOException) value;
+      } else if (value instanceof RuntimeException) {
         throw (RuntimeException) value;
       } else {
         return (T) value;
@@ -37,15 +34,17 @@ public class Promise<T> {
     }
   }
 
-  public T await(long time, TimeUnit unit) {
+  public T await(long time, TimeUnit unit) throws IOException {
     return await(time, unit, null);
   }
 
-  public T await(long time, TimeUnit unit, T timeoutValue) {
+  public T await(long time, TimeUnit unit, T timeoutValue) throws IOException {
     try {
       if (latch.await(time, unit)) {
         final Object value = ref.get();
-        if (value instanceof RuntimeException) {
+        if (value instanceof IOException) {
+          throw (IOException) value;
+        } else if (value instanceof RuntimeException) {
           throw (RuntimeException) value;
         } else {
           return (T) value;

@@ -4,86 +4,73 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.List;
+
+import com.aphyr.riemann.Proto.Event;
+import com.aphyr.riemann.Proto.Query;
 import com.aphyr.riemann.Proto.Msg;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
-// A hybrid UDP/TCP client.
+// Wraps a Transport.
 public class RiemannClient extends AbstractRiemannClient {
-    public final RiemannRetryingTcpClient tcp;
-    public final RiemannUDPClient udp;
+  public final SynchronousTransport transport;
 
-    // Singleton
-    public static RiemannClient singletonClient;
+  // TCP constructors
+  public static RiemannClient tcp(final InetSocketAddress address) throws IOException {
+    return new RiemannClient(new TcpTransport(address));
+  }
 
-    public static RiemannClient getClient() {
-        return singletonClient;
-    }
+  public static RiemannClient tcp(final String host, final int port) throws IOException{
+    return new RiemannClient(new TcpTransport(host, port));
+  }
 
-    public static void setClient(RiemannClient client) {
-        singletonClient = client;
-    }
+  public static RiemannClient tcp(final String host) throws IOException {
+    return new RiemannClient(new TcpTransport(host));
+  }
 
-    public RiemannClient(InetSocketAddress server) {
-        super(server);
-        udp = new RiemannUDPClient(server);
-        tcp = new RiemannRetryingTcpClient(server);
-    }
+  public static RiemannClient tcp(final int port) throws IOException {
+    return new RiemannClient(new TcpTransport(port));
+  }
 
-    public RiemannClient(final int port) throws UnknownHostException {
-       this(new InetSocketAddress(InetAddress.getLocalHost(), port));
-    }
+  // Transport constructors
+  public RiemannClient(final SynchronousTransport t) {
+    this.transport = t;
+  }
 
-    public RiemannClient() throws UnknownHostException {
-        this(new InetSocketAddress(InetAddress.getLocalHost(), DEFAULT_PORT));
-    }
+  public RiemannClient(final AsynchronousTransport t) {
+    this.transport = new SynchronizeTransport(t);
+  }
 
-    @Override
-    public void sendMessage(Msg message) {
-        throw new NotImplementedException();
-    }
+  // Send and receive messages
+  public Msg sendRecvMessage(final Msg m) throws IOException {
+    return transport.sendRecvMessage(m);
+  }
 
-    @Override
-    public Msg recvMessage() {
-        throw new NotImplementedException();
-    }
+  public Msg sendMaybeRecvMessage(final Msg m) throws IOException {
+    return transport.sendMaybeRecvMessage(m);
+  }
 
-    @Override
-    public Msg sendRecvMessage(Msg message) throws IOException {
-        return tcp.sendRecvMessage(message);
-    }
+  // Lifecycle
+  public void connect() throws IOException {
+    transport.connect();
+  }
 
-    @Override
-    // Attempts to dispatch the message quickly via UDP, then falls back to TCP.
-    public Msg sendMaybeRecvMessage(Msg message) throws IOException {
-        try {
-            if (udp.canSendMessage(message)) {
-                return udp.sendMaybeRecvMessage(message);
-            } else {
-                return tcp.sendMaybeRecvMessage(message);
-            }
-        } catch (MsgTooLargeException e) {
-            return tcp.sendMaybeRecvMessage(message);
-        }
-    }
+  public boolean isConnected() {
+    return transport.isConnected();
+  }
 
-    @Override
-    public boolean isConnected() {
-        return(udp.isConnected() && tcp.isConnected());
-    }
+  public void disconnect() throws IOException {
+    transport.disconnect();
+  }
 
-    @Override
-    public void connect() throws IOException {
-        synchronized(this) {
-            udp.connect();
-            tcp.connect();
-        }
-    }
+  public void reconnect() throws IOException {
+    transport.reconnect();
+  }
 
-    @Override
-    public void disconnect() throws IOException {
-        synchronized(this) {
-            udp.disconnect();
-            tcp.disconnect();
-        }
-    }
+  public void flush() throws IOException {
+    transport.flush();
+  }
 }

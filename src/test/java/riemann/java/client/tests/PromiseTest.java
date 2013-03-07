@@ -7,6 +7,7 @@ import java.util.concurrent.TimeUnit;
 import org.junit.Before;
 import org.junit.Test;
 import static junit.framework.Assert.assertEquals;
+import java.io.IOException;
 
 public class PromiseTest {
 
@@ -18,13 +19,13 @@ public class PromiseTest {
   }
 
   @Test
-  public void singleTest() {
+  public void singleTest() throws IOException {
     p.deliver("foo");
     assertEquals("foo", p.await());
   }
 
   @Test
-  public void threadTest() {
+  public void threadTest() throws IOException {
     new Thread(new Runnable() {
       public void run() {
         try {
@@ -39,7 +40,7 @@ public class PromiseTest {
   }
 
   @Test
-  public void timeoutTest() {
+  public void timeoutTest() throws IOException {
     assertEquals(null, p.await(1, TimeUnit.MILLISECONDS));
     assertEquals("failed", p.await(1, TimeUnit.MILLISECONDS, "failed"));
     
@@ -58,7 +59,7 @@ public class PromiseTest {
   }
 
   @Test
-  public void exceptionTest() {
+  public void runtimeExceptionTest() throws IOException {
     RuntimeException thrown = null;
     p.deliver(new RuntimeException("fail"));
     try {
