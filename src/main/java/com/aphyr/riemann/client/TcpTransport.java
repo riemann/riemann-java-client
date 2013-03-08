@@ -47,12 +47,13 @@ public class TcpTransport implements AsynchronousTransport {
   // STATE STATE STATE
   public volatile State state = State.DISCONNECTED;
   public final ChannelGroup channels = new DefaultChannelGroup();
+  public volatile Timer timer; 
+  public volatile ClientBootstrap bootstrap;
 
   // Configuration
   public final AtomicLong reconnectDelay = new AtomicLong(5000);
   public final AtomicLong connectTimeout = new AtomicLong(5000);
   public final InetSocketAddress address;
-  public ClientBootstrap bootstrap;
 
   public TcpTransport(final InetSocketAddress address) {
     this.address = address;
@@ -72,7 +73,19 @@ public class TcpTransport implements AsynchronousTransport {
 
   @Override
   public boolean isConnected() {
-    return state == State.CONNECTED;
+    // Are we in state connected?
+    if (state != State.CONNECTED) {
+      return false;
+    }
+
+    // Is at least one channel connected?
+    for (Channel ch : channels) {
+      if (ch.isConnected()) {
+        return true;
+      }
+    }
+    
+    return false;
   }
 
   @Override
@@ -88,6 +101,9 @@ public class TcpTransport implements AsynchronousTransport {
         Executors.newCachedThreadPool(),
         Executors.newCachedThreadPool());
 
+    // Timer
+    timer = new HashedWheelTimer();
+
     // Create bootstrap
     bootstrap = new ClientBootstrap(channelFactory);
 
@@ -97,27 +113,39 @@ public class TcpTransport implements AsynchronousTransport {
           public ChannelPipeline getPipeline() {
             final ChannelPipeline p = Channels.pipeline();
 
+            p.addLast("reconnect", new ReconnectHandler(
+                bootstrap,
+                timer,
+                reconnectDelay.get(),
+                TimeUnit.MILLISECONDS));
             p.addLast("frame-decoder", new LengthFieldBasedFrameDecoder(
                 Integer.MAX_VALUE, 0, 4, 0, 4));
             p.addLast("frame-encoder", frameEncoder);
             p.addLast("protobuf-decoder", pbDecoder);
             p.addLast("protobuf-encoder", pbEncoder);
             p.addLast("handler", new TcpHandler(channels));
+            
             return p;
           }});
 
     // Set bootstrap options
     bootstrap.setOption("tcpNoDelay", true);
     bootstrap.setOption("keepAlive", true);
+    bootstrap.setOption("remoteAddress", address);
 
-    // Connect asynchronously
-    final ChannelFuture result = bootstrap.connect(address).awaitUninterruptibly();
+    // Connect and wait for attempt
+    final ChannelFuture result = bootstrap.connect().awaitUninterruptibly();
+
+    // At this point we are "connected"--even though the connection may have
+    // failed. The channel will continue to initiate reconnect attempts in the
+    // background.
+    state = State.CONNECTED;
+
+    // We'll throw an exception so users can pretend this call is synchronous
+    // (and log errors as appropriate) but the client might succeed later.
     if (! result.isSuccess()) {
-      disconnect(true);
       throw new IOException("Connection failed", result.getCause());
     }
-
-    state = State.CONNECTED;
   }
 
   @Override
@@ -126,14 +154,16 @@ public class TcpTransport implements AsynchronousTransport {
   }
 
   public synchronized void disconnect(boolean force) throws IOException {
-    if (!(force || isConnected())) {
+    if (!(force || state == State.CONNECTED)) {
       return;
     }
 
     try {
+      timer.stop();
       channels.close().awaitUninterruptibly();
       bootstrap.releaseExternalResources();
     } finally {
+      timer = null;
       bootstrap = null;
       state = State.DISCONNECTED;
     }
@@ -153,7 +183,7 @@ public class TcpTransport implements AsynchronousTransport {
   // Write a message to any available handler and return promise.
   public Promise<Msg> write(final Msg msg, 
       final Promise<Msg> promise) {
-    if (isConnected()) {
+    if (state == State.CONNECTED) {
       final Write write = new Write(msg, promise);
       // Write to any channel
       for (Channel channel : channels) {
