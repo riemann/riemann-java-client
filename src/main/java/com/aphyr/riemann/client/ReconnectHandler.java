@@ -20,6 +20,7 @@ import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
 import com.aphyr.riemann.Proto.Msg;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.nio.channels.*;
 
 public class ReconnectHandler extends SimpleChannelUpstreamHandler {
   final ClientBootstrap bootstrap;
@@ -41,7 +42,6 @@ public class ReconnectHandler extends SimpleChannelUpstreamHandler {
 
   @Override
   public void channelDisconnected(ChannelHandlerContext c, ChannelStateEvent e) {
-    System.out.println("disconnected.");
     // Go ahead and close. I don't know why Netty doesn't close disconnected
     // TCP sockets, but it seems not to.
     e.getChannel().close();
@@ -49,11 +49,9 @@ public class ReconnectHandler extends SimpleChannelUpstreamHandler {
 
   @Override
   public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) {
-    System.out.println("Channel closed.");
     try {
       timer.newTimeout(new TimerTask() {
         public void run(Timeout timeout) throws Exception {
-          System.out.println("Connect");
           bootstrap.connect();
         }
       }, delay, unit);
@@ -65,7 +63,6 @@ public class ReconnectHandler extends SimpleChannelUpstreamHandler {
   @Override
   public void channelConnected(ChannelHandlerContext c, ChannelStateEvent e) {
     if (startTime < 0) {
-      System.out.println("Connected");
       startTime = System.currentTimeMillis();
     }
   }
@@ -78,8 +75,6 @@ public class ReconnectHandler extends SimpleChannelUpstreamHandler {
     }
     else if (cause instanceof ReadTimeoutException) {
       // The connection was OK but there was no traffic for the last period.
-    } else {
-      cause.printStackTrace();
     }
     c.getChannel().close();
   }
