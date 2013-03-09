@@ -14,25 +14,51 @@ import com.aphyr.riemann.Proto.Event;
 import com.aphyr.riemann.Proto.Query;
 import com.aphyr.riemann.Proto.Msg;
 
-// Wraps a Transport.
+// A client which wraps a transport.
 public class RiemannClient extends AbstractRiemannClient {
   public final SynchronousTransport transport;
 
+  // Wrap any transport
+  public static RiemannClient wrap(final SynchronousTransport t) {
+    return new RiemannClient(t);
+  }
+
+  public static RiemannClient wrap(final AsynchronousTransport t) {
+    return new RiemannClient(t);
+  }
+
   // TCP constructors
   public static RiemannClient tcp(final InetSocketAddress address) throws IOException {
-    return new RiemannClient(new TcpTransport(address));
+    return wrap(new TcpTransport(address));
   }
 
   public static RiemannClient tcp(final String host, final int port) throws IOException{
-    return new RiemannClient(new TcpTransport(host, port));
+    return wrap(new TcpTransport(host, port));
   }
 
   public static RiemannClient tcp(final String host) throws IOException {
-    return new RiemannClient(new TcpTransport(host));
+    return wrap(new TcpTransport(host));
   }
 
   public static RiemannClient tcp(final int port) throws IOException {
-    return new RiemannClient(new TcpTransport(port));
+    return wrap(new TcpTransport(port));
+  }
+
+  // UDP constructors
+  public static RiemannClient udp(final InetSocketAddress address) throws IOException {
+    return wrap(new UdpTransport(address));
+  }
+
+  public static RiemannClient udp(final String host, final int port) throws IOException {
+    return wrap(new UdpTransport(host, port));
+  }
+
+  public static RiemannClient udp(final String host) throws IOException {
+    return wrap(new UdpTransport(host));
+  }
+
+  public static RiemannClient udp(final int port) throws IOException {
+    return wrap(new UdpTransport(port));
   }
 
   // Transport constructors

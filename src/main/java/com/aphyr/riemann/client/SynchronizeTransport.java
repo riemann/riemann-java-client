@@ -12,6 +12,10 @@ public class SynchronizeTransport implements SynchronousTransport {
     this.transport = transport;
   }
 
+  public void sendMessage(final Msg msg) throws IOException {
+    transport.sendMessage(msg);
+  }
+
   public Msg sendRecvMessage(final Msg msg) throws IOException {
     return transport.aSendRecvMessage(msg).await();
   }

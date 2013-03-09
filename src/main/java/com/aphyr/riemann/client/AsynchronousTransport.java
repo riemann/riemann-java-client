@@ -5,7 +5,7 @@ import java.io.IOException;
 
 public interface AsynchronousTransport extends Transport {
   // Schedules a message to be sent, returns nothing.
-  void aSendMessage(final Msg msg);
+  void sendMessage(final Msg msg);
 
   // Schedules a message to be sent, returns a promise which fulfills the
   // response.
