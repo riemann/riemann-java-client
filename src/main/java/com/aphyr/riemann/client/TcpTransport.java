@@ -22,10 +22,6 @@ import org.jboss.netty.channel.socket.nio.*;
 import java.util.concurrent.atomic.*;
 
 public class TcpTransport implements AsynchronousTransport {
-  // For writes we don't care about
-  public static final Promise<Msg> blackhole = 
-    new Promise<Msg>();
-
   // Shared pipeline handlers
   public static final ProtobufDecoder pbDecoder = 
     new ProtobufDecoder(Msg.getDefaultInstance());
@@ -195,11 +191,6 @@ public class TcpTransport implements AsynchronousTransport {
       promise.deliver(new IOException("Not connected."));
     }
     return promise;
-  }
-
-  @Override
-  public void sendMessage(final Msg msg) {
-    write(msg, blackhole);
   }
 
   @Override

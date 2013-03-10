@@ -21,7 +21,7 @@ public class PromiseTest {
   @Test
   public void singleTest() throws IOException {
     p.deliver("foo");
-    assertEquals("foo", p.await());
+    assertEquals("foo", p.deref());
   }
 
   @Test
@@ -36,13 +36,13 @@ public class PromiseTest {
         p.deliver("bar");
       }
     }).start();
-    assertEquals("bar", p.await());
+    assertEquals("bar", p.deref());
   }
 
   @Test
   public void timeoutTest() throws IOException {
-    assertEquals(null, p.await(1, TimeUnit.MILLISECONDS));
-    assertEquals("failed", p.await(1, TimeUnit.MILLISECONDS, "failed"));
+    assertEquals(null, p.deref(1, TimeUnit.MILLISECONDS));
+    assertEquals("failed", p.deref(1, TimeUnit.MILLISECONDS, "failed"));
     
     new Thread(new Runnable() {
       public void run() {
@@ -54,8 +54,8 @@ public class PromiseTest {
         p.deliver("done");
       }
     }).start();
-    assertEquals("not yet", p.await(50, TimeUnit.MILLISECONDS, "not yet"));
-    assertEquals("done", p.await(100, TimeUnit.SECONDS));
+    assertEquals("not yet", p.deref(50, TimeUnit.MILLISECONDS, "not yet"));
+    assertEquals("done", p.deref(100, TimeUnit.SECONDS));
   }
 
   @Test
@@ -63,7 +63,7 @@ public class PromiseTest {
     RuntimeException thrown = null;
     p.deliver(new RuntimeException("fail"));
     try {
-      p.await();
+      p.deref();
     } catch (RuntimeException e) {
       thrown = e;
     }

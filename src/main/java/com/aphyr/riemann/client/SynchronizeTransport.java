@@ -5,25 +5,32 @@ package com.aphyr.riemann.client;
 import com.aphyr.riemann.Proto.Msg;
 import java.io.IOException;
 
-public class SynchronizeTransport implements SynchronousTransport {
+public class SynchronizeTransport implements DualTransport {
   public final AsynchronousTransport transport;
-  
+
   public SynchronizeTransport(final AsynchronousTransport transport) {
     this.transport = transport;
   }
 
-  public void sendMessage(final Msg msg) throws IOException {
-    transport.sendMessage(msg);
+  // Asynchronous layer
+  public IPromise<Msg> aSendRecvMessage(final Msg msg) {
+    return transport.aSendRecvMessage(msg);
   }
 
+  public IPromise<Msg> aSendMaybeRecvMessage(final Msg msg) {
+    return transport.aSendMaybeRecvMessage(msg);
+  }
+
+  // Synchronous layer
   public Msg sendRecvMessage(final Msg msg) throws IOException {
-    return transport.aSendRecvMessage(msg).await();
+    return transport.aSendRecvMessage(msg).deref();
   }
 
   public Msg sendMaybeRecvMessage(final Msg msg) throws IOException {
-    return transport.aSendMaybeRecvMessage(msg).await();
+    return transport.aSendMaybeRecvMessage(msg).deref();
   }
 
+  // Lifecycle
   public boolean isConnected() {
     return transport.isConnected();
   }

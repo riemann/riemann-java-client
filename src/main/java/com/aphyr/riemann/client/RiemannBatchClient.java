@@ -110,7 +110,7 @@ public class RiemannBatchClient extends AbstractRiemannClient {
     // Await promises
     for (Promise<Boolean> promise : promises) {
       try {
-        if (! promise.await(readPromiseTimeout.get(), 
+        if (! promise.deref(readPromiseTimeout.get(), 
               TimeUnit.MILLISECONDS, false)) {
           throw new IOException("Timed out waiting for response promise.");
         }
@@ -180,26 +180,42 @@ public class RiemannBatchClient extends AbstractRiemannClient {
     return writes.size();
   }
 
+  @Override
   public void flush() throws IOException {
     flush2();
   }
 
+  @Override
   public Msg sendRecvMessage(final Msg message) throws IOException {
     return client.sendRecvMessage(message);
   }
 
+  @Override
   public Msg sendMaybeRecvMessage(final Msg message) throws IOException {
     return client.sendMaybeRecvMessage(message);
   }
+  
+  @Override
+  public IPromise<Msg> aSendRecvMessage(final Msg message) {
+    return client.aSendRecvMessage(message);
+  }
 
+  @Override
+  public IPromise<Msg> aSendMaybeRecvMessage(final Msg message) {
+    return client.aSendMaybeRecvMessage(message);
+  }
+
+  @Override
   public boolean isConnected() {
     return client.isConnected();
   }
 
+  @Override
   public void connect() throws IOException {
     client.connect();
   }
 
+  @Override
   public void disconnect() throws IOException {
     try {
       flush();
@@ -208,6 +224,7 @@ public class RiemannBatchClient extends AbstractRiemannClient {
     }
   }
 
+  @Override
   public void reconnect() throws IOException {
     client.reconnect();
   }

@@ -153,11 +153,6 @@ public class UdpTransport implements SynchronousTransport {
   }
 
   @Override
-  public void sendMessage(final Msg msg) {
-    channel.write(msg);
-  }
-
-  @Override
   public Msg sendRecvMessage(final Msg msg) {
     throw new UnsupportedOperationException("UDP transport doesn't support receiving messages");
   }

@@ -5,7 +5,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
 import java.io.IOException;
 
-public class Promise<T> {
+public class Promise<T> implements IPromise<T> {
   public final CountDownLatch latch = new CountDownLatch(1);
   public final AtomicReference ref = new AtomicReference(latch);
 
@@ -18,7 +18,7 @@ public class Promise<T> {
     }
   }
 
-  public T await() throws IOException {
+  public T deref() throws IOException {
     try {
       latch.await();
       final Object value = ref.get();
@@ -34,11 +34,11 @@ public class Promise<T> {
     }
   }
 
-  public T await(long time, TimeUnit unit) throws IOException {
-    return await(time, unit, null);
+  public T deref(long time, TimeUnit unit) throws IOException {
+    return deref(time, unit, null);
   }
 
-  public T await(long time, TimeUnit unit, T timeoutValue) throws IOException {
+  public T deref(long time, TimeUnit unit, T timeoutValue) throws IOException {
     try {
       if (latch.await(time, unit)) {
         final Object value = ref.get();
