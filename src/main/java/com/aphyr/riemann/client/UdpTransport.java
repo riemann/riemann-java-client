@@ -77,7 +77,7 @@ public class UdpTransport implements SynchronousTransport {
   public synchronized void connect() throws IOException {
     if (state != State.DISCONNECTED) {
       return;
-    };
+    }
     state = State.CONNECTING;
 
     // Set up channel factory
