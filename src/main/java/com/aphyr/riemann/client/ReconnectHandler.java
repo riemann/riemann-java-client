@@ -18,7 +18,7 @@ import org.jboss.netty.handler.execution.ExecutionHandler;
 import org.jboss.netty.handler.timeout.*;
 import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
 import com.aphyr.riemann.Proto.Msg;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.nio.channels.*;
 
@@ -26,10 +26,10 @@ public class ReconnectHandler extends SimpleChannelUpstreamHandler {
   final ClientBootstrap bootstrap;
   public final Timer timer;
   public long startTime = -1;
-  public final long delay;
+  public final AtomicLong delay;
   public final TimeUnit unit;
 
-  public ReconnectHandler(ClientBootstrap bootstrap, Timer timer, long delay, TimeUnit unit) {
+  public ReconnectHandler(ClientBootstrap bootstrap, Timer timer, AtomicLong delay, TimeUnit unit) {
     this.bootstrap = bootstrap;
     this.timer = timer;
     this.delay = delay;
@@ -54,7 +54,7 @@ public class ReconnectHandler extends SimpleChannelUpstreamHandler {
         public void run(Timeout timeout) throws Exception {
           bootstrap.connect();
         }
-      }, delay, unit);
+      }, delay.get(), unit);
     } catch (java.lang.IllegalStateException ex) {
       // The timer must have been stopped.
     }

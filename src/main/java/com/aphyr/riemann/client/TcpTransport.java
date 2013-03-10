@@ -116,7 +116,7 @@ public class TcpTransport implements AsynchronousTransport {
             p.addLast("reconnect", new ReconnectHandler(
                 bootstrap,
                 timer,
-                reconnectDelay.get(),
+                reconnectDelay,
                 TimeUnit.MILLISECONDS));
             p.addLast("frame-decoder", new LengthFieldBasedFrameDecoder(
                 Integer.MAX_VALUE, 0, 4, 0, 4));
