@@ -47,6 +47,7 @@ public class UdpTransport implements SynchronousTransport {
 
   // Configuration
   public final AtomicLong connectTimeout = new AtomicLong(5000);
+  // Changes to this value are applied only on reconnect.
   public final AtomicInteger sendBufferSize = new AtomicInteger(16384);
   public final InetSocketAddress address;
 
