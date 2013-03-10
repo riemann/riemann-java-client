@@ -198,7 +198,7 @@ public class TcpTransport implements AsynchronousTransport {
   }
 
   @Override
-  public void aSendMessage(final Msg msg) {
+  public void sendMessage(final Msg msg) {
     write(msg, blackhole);
   }
 
