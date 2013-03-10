@@ -16,6 +16,12 @@
     </properties>
 
 	<dependencies>
+                <dependency>
+                        <groupId>org.codehaus.jsr166-mirror</groupId>
+                        <artifactId>jsr166y</artifactId>
+                        <version>1.7.0</version>
+                        <scope>provided</scope>
+                </dependency>
 		<dependency>
 			<groupId>com.google.protobuf</groupId>
 			<artifactId>protobuf-java</artifactId>
