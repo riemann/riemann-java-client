@@ -13,7 +13,7 @@ public class SynchronizeTransport implements SynchronousTransport {
   }
 
   public void sendMessage(final Msg msg) throws IOException {
-    transport.sendMessage(msg);
+    transport.aSendMessage(msg);
   }
 
   public Msg sendRecvMessage(final Msg msg) throws IOException {
