@@ -5,15 +5,9 @@
     <output-test url="file://$MODULE_DIR$/target/test-classes" />
     <content url="file://$MODULE_DIR$">
       <sourceFolder url="file://$MODULE_DIR$/src/main/java" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/target/generated-sources" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/test/java" isTestSource="true" />
-      <sourceFolder url="file://$MODULE_DIR$/target/generated-sources/com" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/target/generated-sources/test-annotations" isTestSource="true" />
-      <sourceFolder url="file://$MODULE_DIR$/target/generated-sources/annotations" isTestSource="false" />
-      <excludeFolder url="file://$MODULE_DIR$/target/antrun" />
       <excludeFolder url="file://$MODULE_DIR$/target/classes" />
-      <excludeFolder url="file://$MODULE_DIR$/target/maven-archiver" />
-      <excludeFolder url="file://$MODULE_DIR$/target/surefire" />
-      <excludeFolder url="file://$MODULE_DIR$/target/surefire-reports" />
       <excludeFolder url="file://$MODULE_DIR$/target/test-classes" />
     </content>
     <orderEntry type="inheritedJdk" />
@@ -23,6 +17,60 @@
     <orderEntry type="library" scope="TEST" name="Maven: org.hamcrest:hamcrest-core:1.1" level="project" />
     <orderEntry type="library" name="Maven: com.yammer.metrics:metrics-core:2.1.2" level="project" />
     <orderEntry type="library" name="Maven: org.slf4j:slf4j-api:1.6.4" level="project" />
+    <orderEntry type="module-library">
+      <library>
+        <CLASSES>
+          <root url="jar://$MAVEN_REPOSITORY$/junit/junit-dep/4.10/junit-dep-4.10.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library">
+      <library>
+        <CLASSES>
+          <root url="jar://$MAVEN_REPOSITORY$/org/hamcrest/hamcrest-core/1.1/hamcrest-core-1.1.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library">
+      <library>
+        <CLASSES>
+          <root url="jar://$MAVEN_REPOSITORY$/io/netty/netty/3.6.1.Final/netty-3.6.1.Final.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library">
+      <library>
+        <CLASSES>
+          <root url="jar://$MAVEN_REPOSITORY$/com/google/protobuf/protobuf-java/2.4.1/protobuf-java-2.4.1.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library">
+      <library>
+        <CLASSES>
+          <root url="jar://$MAVEN_REPOSITORY$/com/yammer/metrics/metrics-core/2.1.2/metrics-core-2.1.2.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
+    <orderEntry type="module-library">
+      <library>
+        <CLASSES>
+          <root url="jar://$MAVEN_REPOSITORY$/org/slf4j/slf4j-api/1.6.4/slf4j-api-1.6.4.jar!/" />
+        </CLASSES>
+        <JAVADOC />
+        <SOURCES />
+      </library>
+    </orderEntry>
   </component>
 </module>
 

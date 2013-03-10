@@ -93,7 +93,8 @@ public class TcpTransport implements AsynchronousTransport {
   public synchronized void connect() throws IOException {
     if (state != State.DISCONNECTED) {
       return;
-    };
+    }
+
     state = State.CONNECTING;
 
     // Set up channel factory
