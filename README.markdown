@@ -29,10 +29,7 @@ is available to make sending events easier.
 # Next steps
 
 - Set host automatically.
-- Add error handling to TcpClient--raise exceptions when msg.getOk() is false.
-- Write a UDP client.
-- Write a hybrid client which dispatches to UDP and TCP clients as appropriate.
 
 # Hacking
 
-You'll need [protoc 2.3.0](http://code.google.com/p/protobuf/downloads/detail?name=protobuf-2.3.0.tar.bz2&can=2&q=). After that, `mvn package` should build a JAR, and `mvn install` will drop it in your local repository.
+You'll need [protoc 2.5.0](http://code.google.com/p/protobuf/downloads/detail?name=protobuf-2.5.0.tar.bz2&can=2&q=). After that, `mvn package` should build a JAR, and `mvn install` will drop it in your local repository.
