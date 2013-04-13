@@ -22,11 +22,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class TcpHandler extends SimpleChannelHandler {
-  public final LinkedBlockingQueue<Promise<Msg>> queue =
-    new LinkedBlockingQueue<Promise<Msg>>();
-
-  // The channel associated with this handler.
-  public volatile Channel channel;
+  public final WriteQueue queue = new WriteQueue();
 
   // The last error used to fulfill outstanding promises.
   public volatile IOException lastError =
@@ -41,37 +37,27 @@ public class TcpHandler extends SimpleChannelHandler {
 
   // When we open, add our channel to the channel group.
   @Override
-  public void channelOpen(ChannelHandlerContext c, ChannelStateEvent e) {
+  public void channelOpen(ChannelHandlerContext c, ChannelStateEvent e) throws Exception {
     channelGroup.add(e.getChannel());
+    super.channelOpen(c, e);
   }
 
   // When we connect, save the channel so we can write to it.
   @Override
-  public void channelConnected(ChannelHandlerContext c, ChannelStateEvent e) {
-    channel = e.getChannel();
+  public void channelConnected(ChannelHandlerContext c, ChannelStateEvent e) throws Exception {
+    queue.open();
+    super.channelConnected(c, e);
   }
 
   @Override
-  public void channelClosed(ChannelHandlerContext c, ChannelStateEvent e) {
-    // Kill the channel, so subsequent writes can fail quickly.
-    channel = null;
-
-    // Remove us from the channel group too
+  public void channelClosed(ChannelHandlerContext c, ChannelStateEvent e) throws Exception {
+    // Remove us from the channel group
     channelGroup.remove(e.getChannel());
-
-    // Another thread might still be calling write(), and have a copy of the
-    // channel. At some point in the future, it's going to call channel.write()
-    // and the channel will tell it the write failed because it's *closed*.
-    // This means there will be no additional enqueued futures, and since the
-    // channel is closed, no additional messages will be received. We are now
-    // the sole owners of the message queue. Right? I hope?
     
-    // Deliver exceptions to any remaining queued promises.
-    final IOException ex = new IOException("Connection closed.");
-    Promise<Msg> promise;
-    while ((promise = queue.poll()) != null) {
-      promise.deliver(ex);
-    }
+    // And mark the queue as closed.
+    queue.close();
+
+    super.channelClosed(c, e);
   }
 
   // We receive a Write, and pass the Write's message downstream, enqueuing the
@@ -88,7 +74,7 @@ public class TcpHandler extends SimpleChannelHandler {
     // Bounce back anything that isn't a Write.
     final MessageEvent me = (MessageEvent) e;
     if (!(me.getMessage() instanceof Write)) {
-      ctx.sendUpstream(me);
+     ctx.sendUpstream(me);
       return;
     }
 
@@ -120,7 +106,7 @@ public class TcpHandler extends SimpleChannelHandler {
   @Override
   public void messageReceived(ChannelHandlerContext c, MessageEvent e) {
     Msg message = (Msg) e.getMessage();
-    queue.poll().deliver(message);
+    queue.take().deliver(message);
   }
 
   // Log exceptions and close.

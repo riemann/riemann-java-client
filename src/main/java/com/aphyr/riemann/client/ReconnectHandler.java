@@ -41,14 +41,15 @@ public class ReconnectHandler extends SimpleChannelUpstreamHandler {
   }
 
   @Override
-  public void channelDisconnected(ChannelHandlerContext c, ChannelStateEvent e) {
+  public void channelDisconnected(ChannelHandlerContext c, ChannelStateEvent e) throws Exception {
     // Go ahead and close. I don't know why Netty doesn't close disconnected
     // TCP sockets, but it seems not to.
     e.getChannel().close();
+    super.channelDisconnected(c, e);
   }
 
   @Override
-  public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) {
+  public void channelClosed(ChannelHandlerContext ctx, ChannelStateEvent e) throws Exception {
     try {
       timer.newTimeout(new TimerTask() {
         public void run(Timeout timeout) throws Exception {
@@ -58,13 +59,15 @@ public class ReconnectHandler extends SimpleChannelUpstreamHandler {
     } catch (java.lang.IllegalStateException ex) {
       // The timer must have been stopped.
     }
+    super.channelClosed(ctx, e);
   }
 
   @Override
-  public void channelConnected(ChannelHandlerContext c, ChannelStateEvent e) {
+  public void channelConnected(ChannelHandlerContext c, ChannelStateEvent e) throws Exception {
     if (startTime < 0) {
       startTime = System.currentTimeMillis();
     }
+    super.channelConnected(c, e);
   }
 
   @Override
