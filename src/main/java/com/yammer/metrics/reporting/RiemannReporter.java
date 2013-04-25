@@ -15,8 +15,8 @@ import java.util.concurrent.TimeUnit;
 
 public class RiemannReporter extends AbstractPollingReporter implements MetricProcessor<Long> {
     private static final Logger LOG = LoggerFactory.getLogger(RiemannReporter.class);
-    protected final RiemannClient riemann;
-    protected final Config c;
+    public final RiemannClient riemann;
+    public final Config c;
 
     public static class Config {
 
