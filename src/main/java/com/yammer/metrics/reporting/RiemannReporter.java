@@ -141,8 +141,8 @@ public class RiemannReporter extends AbstractPollingReporter implements MetricPr
     }
 
     protected void sendRegularMetrics(final Long epoch) {
-        for (Entry<String,SortedMap<MetricName,Metric>> entry : getMetricsRegistry().groupedMetrics(c.predicate).entrySet()) {
-            for (Entry<MetricName, Metric> subEntry : entry.getValue().entrySet()) {
+        for (SortedMap<MetricName,Metric> entry : getMetricsRegistry().groupedMetrics(c.predicate).values()) {
+            for (Entry<MetricName, Metric> subEntry : entry.entrySet()) {
                 final Metric metric = subEntry.getValue();
                 if (metric != null) {
                     try {
