@@ -1,25 +1,28 @@
 package com.aphyr.riemann.client;
 
+import com.aphyr.riemann.Proto.Msg;
+import java.io.*;
+import java.net.*;
 import java.net.InetSocketAddress;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.*;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.net.*;
-import java.io.*;
-import org.jboss.netty.util.HashedWheelTimer;
-import org.jboss.netty.util.Timer;
+import java.util.concurrent.TimeUnit;
+import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.*;
 import org.jboss.netty.channel.group.*;
+import org.jboss.netty.channel.socket.nio.*;
+import org.jboss.netty.handler.codec.frame.*;
 import org.jboss.netty.handler.codec.oneone.*;
 import org.jboss.netty.handler.codec.protobuf.*;
-import org.jboss.netty.handler.codec.frame.*;
-import org.jboss.netty.bootstrap.ClientBootstrap;
+import org.jboss.netty.handler.ssl.*;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLEngine;
 import org.jboss.netty.handler.execution.ExecutionHandler;
 import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
-import com.aphyr.riemann.Proto.Msg;
-import org.jboss.netty.channel.socket.nio.*;
-import java.util.concurrent.atomic.*;
+import org.jboss.netty.util.HashedWheelTimer;
+import org.jboss.netty.util.Timer;
 
 public class TcpTransport implements AsynchronousTransport {
   // Shared pipeline handlers
@@ -50,6 +53,8 @@ public class TcpTransport implements AsynchronousTransport {
   public final AtomicLong reconnectDelay = new AtomicLong(5000);
   public final AtomicLong connectTimeout = new AtomicLong(5000);
   public final InetSocketAddress address;
+  public final AtomicReference<SSLContext> sslContext =
+    new AtomicReference<SSLContext>();
 
   public TcpTransport(final InetSocketAddress address) {
     this.address = address;
@@ -84,6 +89,23 @@ public class TcpTransport implements AsynchronousTransport {
     return false;
   }
 
+  // Builds a new SSLHandler
+  public SslHandler sslHandler() { 
+    final SSLContext context = sslContext.get();
+    if (context == null) {
+      return null;
+    }
+
+    final SSLEngine engine = context.createSSLEngine();
+    engine.setUseClientMode(true);
+
+    final SslHandler handler = new SslHandler(engine);
+    handler.setEnableRenegotiation(false);
+    handler.setIssueHandshake(true);
+
+    return handler;
+  }
+
   @Override
   // Does nothing if not currently disconnected.
   public synchronized void connect() throws IOException {
@@ -114,6 +136,14 @@ public class TcpTransport implements AsynchronousTransport {
                 timer,
                 reconnectDelay,
                 TimeUnit.MILLISECONDS));
+
+            // TLS
+            final SslHandler sslHandler = sslHandler();
+            if (sslHandler != null) {
+              p.addLast("tls", sslHandler); 
+            }
+            
+            // Normal codec
             p.addLast("frame-decoder", new LengthFieldBasedFrameDecoder(
                 Integer.MAX_VALUE, 0, 4, 0, 4));
             p.addLast("frame-encoder", frameEncoder);
@@ -129,12 +159,12 @@ public class TcpTransport implements AsynchronousTransport {
     bootstrap.setOption("keepAlive", true);
     bootstrap.setOption("remoteAddress", address);
 
-    // Connect and wait for attempt
+    // Connect and wait for connection ready
     final ChannelFuture result = bootstrap.connect().awaitUninterruptibly();
 
-    // At this point we are "connected"--even though the connection may have
-    // failed. The channel will continue to initiate reconnect attempts in the
-    // background.
+    // At this point we consider the client "connected"--even though the
+    // connection may have failed. The channel will continue to initiate
+    // reconnect attempts in the background.
     state = State.CONNECTED;
 
     // We'll throw an exception so users can pretend this call is synchronous
