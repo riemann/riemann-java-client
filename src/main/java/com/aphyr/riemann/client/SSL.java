@@ -139,7 +139,7 @@ public class SSL {
     NoSuchAlgorithmException, KeyStoreException, NoSuchProviderException,
     UnrecoverableKeyException {
     final KeyManagerFactory factory =
-      KeyManagerFactory.getInstance("PKIX", "SunJSSE");
+      KeyManagerFactory.getInstance("SunX509", "SunJSSE");
     synchronized(factory) {
       factory.init(keyStore, keyStorePassword);
       for (KeyManager km : factory.getKeyManagers()) {
