@@ -122,7 +122,7 @@ public class SSL {
   public static TrustManager trustManager(final KeyStore keyStore) throws
     NoSuchAlgorithmException, KeyStoreException, NoSuchProviderException {
     final TrustManagerFactory factory =
-      TrustManagerFactory.getInstance("PKIX", "SunJSSE");
+      TrustManagerFactory.getInstance("SunX509", "SunJSSE");
     synchronized(factory) {
       factory.init(keyStore);
       for (TrustManager tm : factory.getTrustManagers()) {
