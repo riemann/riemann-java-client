@@ -193,10 +193,13 @@ public class UdpTransport implements SynchronousTransport {
         exceptionReporter.reportException(e.getCause());
       } catch (final Exception ee) {
         // Oh well
+      } finally {
+        try {
+          disconnect();
+        } catch (final Exception ee) {
+          exceptionReporter.reportException(ee);
+        }
       }
-
-      Channel ch = e.getChannel();
-      ch.close();
     }
   }
 }
