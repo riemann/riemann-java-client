@@ -31,8 +31,11 @@ public class TcpHandler extends SimpleChannelHandler {
   // A channel group so we can keep track of open channels.
   public final ChannelGroup channelGroup;
 
-  public TcpHandler(final ChannelGroup channelGroup) {
+  public final ExceptionReporter exceptionReporter;
+
+  public TcpHandler(final ChannelGroup channelGroup, final ExceptionReporter exceptionReporter) {
     this.channelGroup = channelGroup;
+    this.exceptionReporter = exceptionReporter;
   }
 
   // When we open, add our channel to the channel group.
@@ -112,6 +115,12 @@ public class TcpHandler extends SimpleChannelHandler {
   // Log exceptions and close.
   @Override
   public void exceptionCaught(ChannelHandlerContext c, ExceptionEvent e) {
+    try {
+      exceptionReporter.reportException(e.getCause());
+    } catch (final Exception ee) {
+      // Oh well
+    }
+
     e.getChannel().close();
   }
 }
