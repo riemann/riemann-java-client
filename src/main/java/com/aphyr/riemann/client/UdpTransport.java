@@ -132,12 +132,17 @@ public class UdpTransport implements SynchronousTransport {
     }
 
     try {
-      channel.close().awaitUninterruptibly();
-      bootstrap.releaseExternalResources();
+      if (channel != null) {
+        channel.close().awaitUninterruptibly();
+      }
     } finally {
-      bootstrap = null;
       channel = null;
-      state = State.DISCONNECTED;
+      try {
+        bootstrap.releaseExternalResources();
+      } finally {
+        bootstrap = null;
+        state = State.DISCONNECTED;
+      }
     }
   }
 
