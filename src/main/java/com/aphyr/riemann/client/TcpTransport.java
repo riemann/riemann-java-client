@@ -56,6 +56,17 @@ public class TcpTransport implements AsynchronousTransport {
   public final AtomicReference<SSLContext> sslContext =
     new AtomicReference<SSLContext>();
 
+  public volatile ExceptionReporter exceptionReporter = new ExceptionReporter() {
+    @Override
+    public void reportException(final Throwable t) {
+    t.printStackTrace();
+    }
+  };
+
+  public void setExceptionReporter(final ExceptionReporter exceptionReporter) {
+    this.exceptionReporter = exceptionReporter;
+  }
+
   public TcpTransport(final InetSocketAddress address) {
     this.address = address;
   }
@@ -149,8 +160,8 @@ public class TcpTransport implements AsynchronousTransport {
             p.addLast("frame-encoder", frameEncoder);
             p.addLast("protobuf-decoder", pbDecoder);
             p.addLast("protobuf-encoder", pbEncoder);
-            p.addLast("handler", new TcpHandler(channels));
-            
+            p.addLast("handler", new TcpHandler(channels, exceptionReporter));
+
             return p;
           }});
 

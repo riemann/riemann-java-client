@@ -28,7 +28,7 @@ public class UdpTransport implements SynchronousTransport {
 
   // Shared pipeline handlers
   public static final ProtobufEncoder pbEncoder = new ProtobufEncoder();
-  public static final DiscardHandler discardHandler = new DiscardHandler();
+  public final DiscardHandler discardHandler = new DiscardHandler();
 
   public static final int DEFAULT_PORT = 5555;
 
@@ -50,6 +50,17 @@ public class UdpTransport implements SynchronousTransport {
   // Changes to this value are applied only on reconnect.
   public final AtomicInteger sendBufferSize = new AtomicInteger(16384);
   public final InetSocketAddress address;
+
+  public volatile ExceptionReporter exceptionReporter = new ExceptionReporter() {
+    @Override
+    public void reportException(final Throwable t) {
+    t.printStackTrace();
+    }
+  };
+
+  public void setExceptionReporter(final ExceptionReporter exceptionReporter) {
+    this.exceptionReporter = exceptionReporter;
+  }
 
   public UdpTransport(final InetSocketAddress address) {
     this.address = address;
@@ -171,17 +182,24 @@ public class UdpTransport implements SynchronousTransport {
 
 
 
-  public static class DiscardHandler extends SimpleChannelHandler {
+  public class DiscardHandler extends SimpleChannelHandler {
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
     }
 
     @Override
     public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
-      e.getCause().printStackTrace();
-
-      Channel ch = e.getChannel();
-      ch.close();
+      try {
+        exceptionReporter.reportException(e.getCause());
+      } catch (final Exception ee) {
+        // Oh well
+      } finally {
+        try {
+          disconnect();
+        } catch (final Exception ee) {
+          exceptionReporter.reportException(ee);
+        }
+      }
     }
   }
 }
