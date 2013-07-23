@@ -43,9 +43,11 @@ public class UdpTransport implements SynchronousTransport {
   // STATE STATE STATE
   public volatile State state = State.DISCONNECTED;
   public volatile Channel channel = null;
+  public volatile Timer timer;
   public volatile ConnectionlessBootstrap bootstrap;
 
   // Configuration
+  public final AtomicLong reconnectDelay = new AtomicLong(5000);
   public final AtomicLong connectTimeout = new AtomicLong(5000);
   // Changes to this value are applied only on reconnect.
   public final AtomicInteger sendBufferSize = new AtomicInteger(16384);
@@ -96,6 +98,9 @@ public class UdpTransport implements SynchronousTransport {
     final ChannelFactory channelFactory = new NioDatagramChannelFactory(
         Executors.newCachedThreadPool());
 
+    // Timer
+    timer = new HashedWheelTimer();
+
     // Create bootstrap
     bootstrap = new ConnectionlessBootstrap(channelFactory);
 
@@ -105,6 +110,13 @@ public class UdpTransport implements SynchronousTransport {
           public ChannelPipeline getPipeline() {
             final ChannelPipeline p = Channels.pipeline();
 
+            p.addLast("reconnect", new ReconnectHandler(
+                // Why is this cast even necessary? Nothing makes any fucking
+                // sense in Java
+                (ConnectionlessBootstrap) bootstrap,
+                timer,
+                reconnectDelay,
+                TimeUnit.MILLISECONDS));
             p.addLast("protobuf-encoder", pbEncoder);
             p.addLast("discard", discardHandler);
             
@@ -142,17 +154,29 @@ public class UdpTransport implements SynchronousTransport {
       return;
     }
 
+    // Stop timer
     try {
-      if (channel != null) {
-        channel.close().awaitUninterruptibly();
+      if (timer != null) {
+        timer.stop();
       }
     } finally {
-      channel = null;
+      timer = null;
+
+      // Close channel
       try {
-        bootstrap.releaseExternalResources();
+        if (channel != null) {
+          channel.close().awaitUninterruptibly();
+        }
       } finally {
-        bootstrap = null;
-        state = State.DISCONNECTED;
+        channel = null;
+        
+        // Stop bootstrap
+        try {
+          bootstrap.releaseExternalResources();
+        } finally {
+          bootstrap = null;
+          state = State.DISCONNECTED;
+        }
       }
     }
   }
@@ -195,7 +219,7 @@ public class UdpTransport implements SynchronousTransport {
         // Oh well
       } finally {
         try {
-          disconnect();
+          ctx.getChannel().close();
         } catch (final Exception ee) {
           exceptionReporter.reportException(ee);
         }

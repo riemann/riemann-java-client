@@ -13,7 +13,9 @@ import org.jboss.netty.channel.group.*;
 import org.jboss.netty.handler.codec.oneone.*;
 import org.jboss.netty.handler.codec.protobuf.*;
 import org.jboss.netty.handler.codec.frame.*;
+import org.jboss.netty.bootstrap.Bootstrap;
 import org.jboss.netty.bootstrap.ClientBootstrap;
+import org.jboss.netty.bootstrap.ConnectionlessBootstrap;
 import org.jboss.netty.handler.execution.ExecutionHandler;
 import org.jboss.netty.handler.timeout.*;
 import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
@@ -23,13 +25,20 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.nio.channels.*;
 
 public class ReconnectHandler extends SimpleChannelUpstreamHandler {
-  final ClientBootstrap bootstrap;
+  final Bootstrap bootstrap;
   public final Timer timer;
   public long startTime = -1;
   public final AtomicLong delay;
   public final TimeUnit unit;
 
   public ReconnectHandler(ClientBootstrap bootstrap, Timer timer, AtomicLong delay, TimeUnit unit) {
+    this.bootstrap = bootstrap;
+    this.timer = timer;
+    this.delay = delay;
+    this.unit = unit;
+  }
+  
+  public ReconnectHandler(ConnectionlessBootstrap bootstrap, Timer timer, AtomicLong delay, TimeUnit unit) {
     this.bootstrap = bootstrap;
     this.timer = timer;
     this.delay = delay;
@@ -53,7 +62,11 @@ public class ReconnectHandler extends SimpleChannelUpstreamHandler {
     try {
       timer.newTimeout(new TimerTask() {
         public void run(Timeout timeout) throws Exception {
-          bootstrap.connect();
+          if (bootstrap instanceof ClientBootstrap) {
+            ((ClientBootstrap) bootstrap).connect();
+          } else if (bootstrap instanceof ConnectionlessBootstrap) {
+            ((ConnectionlessBootstrap) bootstrap).connect();
+          }
         }
       }, delay.get(), unit);
     } catch (java.lang.IllegalStateException ex) {
