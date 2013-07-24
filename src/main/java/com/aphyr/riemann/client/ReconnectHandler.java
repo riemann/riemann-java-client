@@ -91,6 +91,8 @@ public class ReconnectHandler extends SimpleChannelUpstreamHandler {
     }
     else if (cause instanceof ReadTimeoutException) {
       // The connection was OK but there was no traffic for the last period.
+    } else {
+      c.sendUpstream(e);
     }
     c.getChannel().close();
   }
