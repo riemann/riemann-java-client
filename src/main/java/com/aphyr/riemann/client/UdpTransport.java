@@ -111,9 +111,7 @@ public class UdpTransport implements SynchronousTransport {
             final ChannelPipeline p = Channels.pipeline();
 
             p.addLast("reconnect", new ReconnectHandler(
-                // Why is this cast even necessary? Nothing makes any fucking
-                // sense in Java
-                (ConnectionlessBootstrap) bootstrap,
+                bootstrap,
                 timer,
                 reconnectDelay,
                 TimeUnit.MILLISECONDS));
