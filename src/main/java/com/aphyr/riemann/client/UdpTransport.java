@@ -42,9 +42,9 @@ public class UdpTransport implements SynchronousTransport {
 
   // STATE STATE STATE
   public volatile State state = State.DISCONNECTED;
-  public volatile Channel channel = null;
   public volatile Timer timer;
   public volatile ConnectionlessBootstrap bootstrap;
+  public final ChannelGroup channels = new DefaultChannelGroup();
 
   // Configuration
   public final AtomicLong reconnectDelay = new AtomicLong(5000);
@@ -116,6 +116,7 @@ public class UdpTransport implements SynchronousTransport {
                 reconnectDelay,
                 TimeUnit.MILLISECONDS));
             p.addLast("protobuf-encoder", pbEncoder);
+            p.addLast("channelgroups", new ChannelGroupHandler(channels));
             p.addLast("discard", discardHandler);
             
             return p;
@@ -133,10 +134,6 @@ public class UdpTransport implements SynchronousTransport {
       disconnect(true);
       throw new IOException("Connection failed", result.getCause());
     }
-    
-    // Set up channel
-    channel = result.getChannel();
-    channel.setReadable(false);
 
     // Done
     state = State.CONNECTED;
@@ -162,12 +159,9 @@ public class UdpTransport implements SynchronousTransport {
 
       // Close channel
       try {
-        if (channel != null) {
-          channel.close().awaitUninterruptibly();
-        }
+          channels.close().awaitUninterruptibly();
       } finally {
-        channel = null;
-        
+
         // Stop bootstrap
         try {
           bootstrap.releaseExternalResources();
@@ -197,7 +191,7 @@ public class UdpTransport implements SynchronousTransport {
 
   @Override
   public Msg sendMaybeRecvMessage(final Msg msg) {
-    channel.write(msg);
+    channels.write(msg);
     return null;
   }
 
@@ -207,6 +201,11 @@ public class UdpTransport implements SynchronousTransport {
   public class DiscardHandler extends SimpleChannelHandler {
     @Override
     public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
+    }
+
+    @Override
+    public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e) {
+      ctx.getChannel().setReadable(false);
     }
 
     @Override
