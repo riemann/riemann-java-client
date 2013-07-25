@@ -1,14 +1,10 @@
 package com.aphyr.riemann.client;
 
-import com.google.protobuf.MessageLite;
-
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-
-import static org.jboss.netty.buffer.ChannelBuffers.wrappedBuffer;
 
 public class SimpleUdpTransport implements SynchronousTransport {
 
