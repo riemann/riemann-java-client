@@ -12,6 +12,8 @@ import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 public class SimpleUdpClientTest {
@@ -39,6 +41,7 @@ public class SimpleUdpClientTest {
       final RiemannClient client = new RiemannClient(new SimpleUdpTransport(serverSocket.getLocalPort()));
       try {
         client.connect();
+        assertTrue(client.isConnected());
         sendTestMessages(serverSocket, client);
 
         // Close listening socket
@@ -56,6 +59,7 @@ public class SimpleUdpClientTest {
 
       } finally {
         client.disconnect();
+        assertFalse(client.isConnected());
       }
     } finally {
       serverSocket.close();

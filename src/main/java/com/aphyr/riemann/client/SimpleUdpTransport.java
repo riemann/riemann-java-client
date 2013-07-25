@@ -50,7 +50,7 @@ public class SimpleUdpTransport implements SynchronousTransport {
 
   @Override
   public boolean isConnected() {
-    return false;  //To change body of implemented methods use File | Settings | File Templates.
+    return connected;
   }
 
   @Override
