@@ -4,9 +4,11 @@ import com.yammer.metrics.reporting.RiemannReporter;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.HashSet;
 import java.util.concurrent.TimeUnit;
 
 import static junit.framework.Assert.assertEquals;
+import static junit.framework.Assert.assertTrue;
 
 public class RiemannReporterConfigTest {
 
@@ -24,6 +26,7 @@ public class RiemannReporterConfigTest {
         assertEquals(c.unit, TimeUnit.SECONDS);
         assertEquals(c.separator, " ");
         assertEquals(c.host, "localhost");
+        assertTrue(c.tags.isEmpty());
     }
 
     @Test
@@ -42,4 +45,11 @@ public class RiemannReporterConfigTest {
 
     }
 
+    @Test
+    public void testTagsConfigBuilding() {
+        RiemannReporter.Config c = builder.tags(new HashSet<String>(){{ add("abc"); add("123"); }})
+                                          .build();
+        assertTrue(c.tags.contains("abc"));
+        assertTrue(c.tags.contains("123"));
+    }
 }
