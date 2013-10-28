@@ -20,7 +20,7 @@ to your maven repository like so:
 ## Example
 
 ``` java
-RiemannClient c = new RiemannTcpClient(new InetSocketAddress("my.riemann.server", 5555));
+RiemannClient c = RiemannClient.tcp("my.riemann.server", 5555);
 c.event().
   service("fridge").
   state("running").

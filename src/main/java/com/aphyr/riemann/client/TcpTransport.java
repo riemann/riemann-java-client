@@ -160,7 +160,8 @@ public class TcpTransport implements AsynchronousTransport {
             p.addLast("frame-encoder", frameEncoder);
             p.addLast("protobuf-decoder", pbDecoder);
             p.addLast("protobuf-encoder", pbEncoder);
-            p.addLast("handler", new TcpHandler(channels, exceptionReporter));
+            p.addLast("channelgroups", new ChannelGroupHandler(channels));
+            p.addLast("handler", new TcpHandler(exceptionReporter));
 
             return p;
           }});

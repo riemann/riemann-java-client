@@ -28,20 +28,15 @@ public class TcpHandler extends SimpleChannelHandler {
   public volatile IOException lastError =
     new IOException("Channel closed.");
 
-  // A channel group so we can keep track of open channels.
-  public final ChannelGroup channelGroup;
-
   public final ExceptionReporter exceptionReporter;
 
-  public TcpHandler(final ChannelGroup channelGroup, final ExceptionReporter exceptionReporter) {
-    this.channelGroup = channelGroup;
+  public TcpHandler(final ExceptionReporter exceptionReporter) {
     this.exceptionReporter = exceptionReporter;
   }
 
   // When we open, add our channel to the channel group.
   @Override
   public void channelOpen(ChannelHandlerContext c, ChannelStateEvent e) throws Exception {
-    channelGroup.add(e.getChannel());
     super.channelOpen(c, e);
   }
 
@@ -54,9 +49,7 @@ public class TcpHandler extends SimpleChannelHandler {
 
   @Override
   public void channelClosed(ChannelHandlerContext c, ChannelStateEvent e) throws Exception {
-    // Remove us from the channel group
-    channelGroup.remove(e.getChannel());
-    
+
     // And mark the queue as closed.
     queue.close();
 
