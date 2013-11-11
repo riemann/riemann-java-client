@@ -85,14 +85,14 @@ public class ReconnectHandler extends SimpleChannelUpstreamHandler {
 
   @Override
   public void exceptionCaught(ChannelHandlerContext c, ExceptionEvent e) {
-    Throwable cause = e.getCause();
+    final Throwable cause = e.getCause();
+    
     if (cause instanceof ConnectException) {
       startTime = -1;
-    }
-    else if (cause instanceof ReadTimeoutException) {
+    } else if (cause instanceof ReadTimeoutException) {
       // The connection was OK but there was no traffic for the last period.
     } else {
-      c.sendUpstream(e);
+     c.sendUpstream(e);
     }
     c.getChannel().close();
   }
