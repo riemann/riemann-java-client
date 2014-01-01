@@ -1,6 +1,7 @@
 package com.yammer.metrics.reporting;
 
 import com.aphyr.riemann.client.EventDSL;
+import com.aphyr.riemann.client.AbstractRiemannClient;
 import com.aphyr.riemann.client.RiemannClient;
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.*;
@@ -20,7 +21,7 @@ import java.util.concurrent.TimeUnit;
 
 public class RiemannReporter extends AbstractPollingReporter implements MetricProcessor<Long> {
     private static final Logger LOG = LoggerFactory.getLogger(RiemannReporter.class);
-    public final RiemannClient riemann;
+    public final AbstractRiemannClient riemann;
     public final Config c;
 
     public static class Config {
@@ -129,7 +130,7 @@ public class RiemannReporter extends AbstractPollingReporter implements MetricPr
         riemann.connect();
     }
 
-    public RiemannReporter(final Config c, final RiemannClient riemann) {
+    public RiemannReporter(final Config c, final AbstractRiemannClient riemann) {
         super(c.metricsRegistry, c.name);
         this.riemann = riemann;
         this.c = c;
