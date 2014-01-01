@@ -37,6 +37,7 @@ import java.util.List;
 import com.aphyr.riemann.Proto.Msg;
 import com.aphyr.riemann.Proto.Event;
 import com.aphyr.riemann.client.AbstractTransferQueue;
+import java.lang.RuntimeException;
 import java.io.IOException;
 import java.net.UnknownHostException;
 
@@ -76,6 +77,7 @@ public class RiemannBatchClient extends AbstractRiemannClient {
       buffer = klass.asSubclass(AbstractTransferQueue.class).newInstance();
     } catch (Exception e) {
       buffer = null;
+      throw new RuntimeException("Failed casting " + klass.toString() + " to " + AbstractTransferQueue.class.toString(), e);
     }
     this.buffer = buffer;
   }
