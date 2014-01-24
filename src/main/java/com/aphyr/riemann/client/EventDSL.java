@@ -153,7 +153,7 @@ public class EventDSL {
     }
 
     public EventDSL attributes(Map<String, String> attributes) {
-      attributes.putAll(attributes);
+      this.attributes.putAll(attributes);
       return this;
     }
 
