@@ -86,7 +86,7 @@ public class TcpHandler extends SimpleChannelHandler {
     final Promise promise = write.promise;
 
     // If we're over capacity, abort the promise and drop the message here.
-    if (maxInflightRequests.get() < queue.size) {
+    if (maxInflightRequests.get() <= queue.size) {
       promise.deliver(
           new OverloadedException("Too many requests in flight")
       );
