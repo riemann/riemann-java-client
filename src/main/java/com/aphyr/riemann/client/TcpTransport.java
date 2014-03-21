@@ -23,8 +23,13 @@ import org.jboss.netty.handler.execution.ExecutionHandler;
 import org.jboss.netty.handler.execution.OrderedMemoryAwareThreadPoolExecutor;
 import org.jboss.netty.util.HashedWheelTimer;
 import org.jboss.netty.util.Timer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TcpTransport implements AsynchronousTransport {
+  // Logger
+  public final Logger logger = LoggerFactory.getLogger(TcpTransport.class);
+
   // Shared pipeline handlers
   public static final ProtobufDecoder pbDecoder =
     new ProtobufDecoder(Msg.getDefaultInstance());
@@ -60,7 +65,7 @@ public class TcpTransport implements AsynchronousTransport {
   public volatile ExceptionReporter exceptionReporter = new ExceptionReporter() {
     @Override
     public void reportException(final Throwable t) {
-    t.printStackTrace();
+      logger.warn("caught", t);
     }
   };
 
@@ -142,7 +147,8 @@ public class TcpTransport implements AsynchronousTransport {
         new ChannelPipelineFactory() {
           public ChannelPipeline getPipeline() {
             final ChannelPipeline p = Channels.pipeline();
-
+            
+            // Reconnections
             p.addLast("reconnect", new ReconnectHandler(
                 bootstrap,
                 timer,
@@ -161,9 +167,8 @@ public class TcpTransport implements AsynchronousTransport {
             p.addLast("frame-encoder", frameEncoder);
             p.addLast("protobuf-decoder", pbDecoder);
             p.addLast("protobuf-encoder", pbEncoder);
-            p.addLast("handler", new TcpHandler(channels,
-                                                exceptionReporter,
-                                                maxInflightRequests));
+            p.addLast("channelgroups", new ChannelGroupHandler(channels));
+            p.addLast("handler", new TcpHandler(exceptionReporter, maxInflightRequests));
 
             return p;
           }});

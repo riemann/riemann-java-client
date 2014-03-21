@@ -1,6 +1,8 @@
 package com.yammer.metrics.reporting;
 
-import com.aphyr.riemann.client.*;
+import com.aphyr.riemann.client.EventDSL;
+import com.aphyr.riemann.client.AbstractRiemannClient;
+import com.aphyr.riemann.client.RiemannClient;
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.*;
 import com.yammer.metrics.stats.Snapshot;
@@ -9,13 +11,17 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
 import java.util.Map.Entry;
 import java.util.SortedMap;
 import java.util.concurrent.TimeUnit;
 
 public class RiemannReporter extends AbstractPollingReporter implements MetricProcessor<Long> {
     private static final Logger LOG = LoggerFactory.getLogger(RiemannReporter.class);
-    public final RiemannClient riemann;
+    public final AbstractRiemannClient riemann;
     public final Config c;
 
     public static class Config {
@@ -33,10 +39,11 @@ public class RiemannReporter extends AbstractPollingReporter implements MetricPr
         public final Clock clock;
         public final String name;
         public final String localHost;
+        public final List<String> tags;
 
         private Config(MetricsRegistry metricsRegistry, MetricPredicate predicate, boolean printVMMetrics,
                        String host, int port, long period, TimeUnit unit, String prefix, String separator,
-                       Clock clock, String name, String localHost) {
+                       Clock clock, String name, String localHost, List<String> tags) {
             this.metricsRegistry = metricsRegistry;
             this.predicate = predicate;
             this.printVMMetrics = printVMMetrics;
@@ -49,6 +56,7 @@ public class RiemannReporter extends AbstractPollingReporter implements MetricPr
             this.clock = clock;
             this.name = name;
             this.localHost = localHost;
+            this.tags = tags;
 
         }
 
@@ -62,7 +70,7 @@ public class RiemannReporter extends AbstractPollingReporter implements MetricPr
                     "print_metrics:" + printVMMetrics + ", host:" + host + ", port:" + port + ", period:" + period +
                     ", unit:" + unit + ", prefix:" + prefix + ", separator:" + separator + ", clock:" + clock +
                     ", name:" + name + ", localhost:" + localHost + ", metrics_registry:" + metricsRegistry +
-                    ", predicate:" + predicate + "}";
+                    ", predicate:" + predicate + ", tags:" + Arrays.toString(tags.toArray()) + "}";
         }
     }
 
@@ -81,12 +89,13 @@ public class RiemannReporter extends AbstractPollingReporter implements MetricPr
         private Clock clock = Clock.defaultClock();
         private String name = "riemann-reporter";
         private String localHost = null;
+        private List<String> tags = new ArrayList<String>();
 
         private ConfigBuilder() { }
 
         public Config build(){
             return new Config(metricsRegistry, predicate, printVMMetrics, host, port,
-                              period, unit, prefix, separator, clock, name, localHost);
+                              period, unit, prefix, separator, clock, name, localHost, tags);
         }
 
         public ConfigBuilder metricsRegistry(MetricsRegistry r) { metricsRegistry = r; return this; }
@@ -101,6 +110,7 @@ public class RiemannReporter extends AbstractPollingReporter implements MetricPr
         public ConfigBuilder clock(Clock c) { clock = c; return this;        }
         public ConfigBuilder name(String n) { name = n; return this; }
         public ConfigBuilder localHost(String l) { localHost = l; return this; }
+        public ConfigBuilder tags(Collection<String> ts) { tags.clear(); tags.addAll(ts); return this; }
     }
 
     public static void enable(final Config config) {
@@ -120,7 +130,7 @@ public class RiemannReporter extends AbstractPollingReporter implements MetricPr
         riemann.connect();
     }
 
-    public RiemannReporter(final Config c, final RiemannClient riemann) {
+    public RiemannReporter(final Config c, final AbstractRiemannClient riemann) {
         super(c.metricsRegistry, c.name);
         this.riemann = riemann;
         this.c = c;
@@ -159,6 +169,9 @@ public class RiemannReporter extends AbstractPollingReporter implements MetricPr
         EventDSL event = riemann.event();
         if (c.localHost != null) {
             event.host(c.localHost);
+        }
+        if (!c.tags.isEmpty()) {
+            event.tags(c.tags);
         }
         return event;
     }

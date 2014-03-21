@@ -42,10 +42,12 @@ public class UdpTransport implements SynchronousTransport {
 
   // STATE STATE STATE
   public volatile State state = State.DISCONNECTED;
-  public volatile Channel channel = null;
+  public volatile Timer timer;
   public volatile ConnectionlessBootstrap bootstrap;
+  public final ChannelGroup channels = new DefaultChannelGroup();
 
   // Configuration
+  public final AtomicLong reconnectDelay = new AtomicLong(5000);
   public final AtomicLong connectTimeout = new AtomicLong(5000);
   // Changes to this value are applied only on reconnect.
   public final AtomicInteger sendBufferSize = new AtomicInteger(16384);
@@ -96,6 +98,9 @@ public class UdpTransport implements SynchronousTransport {
     final ChannelFactory channelFactory = new NioDatagramChannelFactory(
         Executors.newCachedThreadPool());
 
+    // Timer
+    timer = new HashedWheelTimer();
+
     // Create bootstrap
     bootstrap = new ConnectionlessBootstrap(channelFactory);
 
@@ -105,7 +110,13 @@ public class UdpTransport implements SynchronousTransport {
           public ChannelPipeline getPipeline() {
             final ChannelPipeline p = Channels.pipeline();
 
+            p.addLast("reconnect", new ReconnectHandler(
+                bootstrap,
+                timer,
+                reconnectDelay,
+                TimeUnit.MILLISECONDS));
             p.addLast("protobuf-encoder", pbEncoder);
+            p.addLast("channelgroups", new ChannelGroupHandler(channels));
             p.addLast("discard", discardHandler);
             
             return p;
@@ -123,10 +134,6 @@ public class UdpTransport implements SynchronousTransport {
       disconnect(true);
       throw new IOException("Connection failed", result.getCause());
     }
-    
-    // Set up channel
-    channel = result.getChannel();
-    channel.setReadable(false);
 
     // Done
     state = State.CONNECTED;
@@ -142,17 +149,26 @@ public class UdpTransport implements SynchronousTransport {
       return;
     }
 
+    // Stop timer
     try {
-      if (channel != null) {
-        channel.close().awaitUninterruptibly();
+      if (timer != null) {
+        timer.stop();
       }
     } finally {
-      channel = null;
+      timer = null;
+
+      // Close channel
       try {
-        bootstrap.releaseExternalResources();
+          channels.close().awaitUninterruptibly();
       } finally {
-        bootstrap = null;
-        state = State.DISCONNECTED;
+
+        // Stop bootstrap
+        try {
+          bootstrap.releaseExternalResources();
+        } finally {
+          bootstrap = null;
+          state = State.DISCONNECTED;
+        }
       }
     }
   }
@@ -175,7 +191,7 @@ public class UdpTransport implements SynchronousTransport {
 
   @Override
   public Msg sendMaybeRecvMessage(final Msg msg) {
-    channel.write(msg);
+    channels.write(msg);
     return null;
   }
 
@@ -188,6 +204,11 @@ public class UdpTransport implements SynchronousTransport {
     }
 
     @Override
+    public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e) {
+      ctx.getChannel().setReadable(false);
+    }
+
+    @Override
     public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
       try {
         exceptionReporter.reportException(e.getCause());
@@ -195,7 +216,7 @@ public class UdpTransport implements SynchronousTransport {
         // Oh well
       } finally {
         try {
-          disconnect();
+          ctx.getChannel().close();
         } catch (final Exception ee) {
           exceptionReporter.reportException(ee);
         }

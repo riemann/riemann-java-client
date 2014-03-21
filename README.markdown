@@ -20,7 +20,8 @@ to your maven repository like so:
 ## Example
 
 ``` java
-RiemannClient c = new RiemannTcpClient(new InetSocketAddress("my.riemann.server", 5555));
+RiemannClient c = RiemannClient.tcp("my.riemann.server", 5555);
+c.connect();
 c.event().
   service("fridge").
   state("running").
@@ -29,6 +30,7 @@ c.event().
   send();
 
 c.query("tagged \"cold\" and metric > 0"); // => List<Event>;
+c.disconnect();
 ``` 
 
 # Status
