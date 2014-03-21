@@ -3,6 +3,7 @@ package com.aphyr.riemann.client;
 import com.aphyr.riemann.Proto.Msg;
 import java.io.*;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 
 // A synchronized FIFO queue intended to track the outstanding writes
 // associated with a TCP connection. Calling close() flushes the queue
@@ -10,27 +11,40 @@ import java.util.concurrent.LinkedBlockingQueue;
 // again.
 public class WriteQueue {
   public boolean isOpen = true;
+  public volatile int size = 0;
   public final LinkedBlockingQueue<Promise<Msg>> queue =
     new LinkedBlockingQueue<Promise<Msg>>();
 
   public synchronized void open() {
     isOpen = true;
+    size = 0;
   }
 
   public synchronized void close() {
     isOpen = false;
-    
+
     // Deliver exceptions to all outstanding promises.
     final IOException ex = new IOException("Channel closed.");
     Promise<Msg> promise;
     while ((promise = queue.poll()) != null) {
       promise.deliver(ex);
     }
+
+    size = 0;
   }
 
   public synchronized void put(final Promise<Msg> p) throws InterruptedException {
     if (isOpen) {
-      queue.put(p);
+      try {
+        queue.put(p);
+        size++;
+      } catch (RuntimeException e) {
+        size = queue.size();
+        throw e;
+      } catch (InterruptedException e) {
+        size = queue.size();
+        throw e;
+      }
     } else {
       p.deliver(new IOException("Channel closed."));
     }
@@ -38,8 +52,14 @@ public class WriteQueue {
 
   public synchronized Promise<Msg> take() {
     try {
-      return queue.take();
+      final Promise<Msg> p = queue.take();
+      size--;
+      return p;
+    } catch (RuntimeException e) {
+      size = queue.size();
+      throw e;
     } catch (InterruptedException e) {
+      size = queue.size();
       throw new RuntimeException(e);
     }
   }

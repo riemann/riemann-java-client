@@ -5,6 +5,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.*;
 import java.net.*;
 import java.io.*;
 import org.jboss.netty.util.HashedWheelTimer;
@@ -24,6 +25,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 public class TcpHandler extends SimpleChannelHandler {
   public final WriteQueue queue = new WriteQueue();
 
+  public final AtomicInteger maxInflightRequests;
+
   // The last error used to fulfill outstanding promises.
   public volatile IOException lastError =
     new IOException("Channel closed.");
@@ -33,9 +36,12 @@ public class TcpHandler extends SimpleChannelHandler {
 
   public final ExceptionReporter exceptionReporter;
 
-  public TcpHandler(final ChannelGroup channelGroup, final ExceptionReporter exceptionReporter) {
+  public TcpHandler(final ChannelGroup channelGroup,
+                    final ExceptionReporter exceptionReporter,
+                    final AtomicInteger maxInflightRequests) {
     this.channelGroup = channelGroup;
     this.exceptionReporter = exceptionReporter;
+    this.maxInflightRequests = maxInflightRequests;
   }
 
   // When we open, add our channel to the channel group.
@@ -47,16 +53,18 @@ public class TcpHandler extends SimpleChannelHandler {
 
   // When we connect, save the channel so we can write to it.
   @Override
-  public void channelConnected(ChannelHandlerContext c, ChannelStateEvent e) throws Exception {
+  public void channelConnected(ChannelHandlerContext c,
+                               ChannelStateEvent e) throws Exception {
     queue.open();
     super.channelConnected(c, e);
   }
 
   @Override
-  public void channelClosed(ChannelHandlerContext c, ChannelStateEvent e) throws Exception {
+  public void channelClosed(ChannelHandlerContext c,
+                            ChannelStateEvent e) throws Exception {
     // Remove us from the channel group
     channelGroup.remove(e.getChannel());
-    
+
     // And mark the queue as closed.
     queue.close();
 
@@ -85,6 +93,14 @@ public class TcpHandler extends SimpleChannelHandler {
     final Write write = (Write) me.getMessage();
     final Msg message = write.message;
     final Promise promise = write.promise;
+
+    // If we're over capacity, abort the promise and drop the message here.
+    if (maxInflightRequests.get() < queue.size) {
+      promise.deliver(
+          new OverloadedException("Too many requests in flight")
+      );
+      return;
+    }
 
     // When the message event is written...
     me.getFuture().addListener(new ChannelFutureListener() {

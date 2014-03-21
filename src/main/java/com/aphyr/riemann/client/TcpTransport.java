@@ -26,11 +26,11 @@ import org.jboss.netty.util.Timer;
 
 public class TcpTransport implements AsynchronousTransport {
   // Shared pipeline handlers
-  public static final ProtobufDecoder pbDecoder = 
+  public static final ProtobufDecoder pbDecoder =
     new ProtobufDecoder(Msg.getDefaultInstance());
-  public static final ProtobufEncoder pbEncoder = 
+  public static final ProtobufEncoder pbEncoder =
     new ProtobufEncoder();
-  public static final LengthFieldPrepender frameEncoder = 
+  public static final LengthFieldPrepender frameEncoder =
     new LengthFieldPrepender(4);
 
   public static final int DEFAULT_PORT = 5555;
@@ -46,12 +46,13 @@ public class TcpTransport implements AsynchronousTransport {
   // STATE STATE STATE
   public volatile State state = State.DISCONNECTED;
   public final ChannelGroup channels = new DefaultChannelGroup();
-  public volatile Timer timer; 
+  public volatile Timer timer;
   public volatile ClientBootstrap bootstrap;
 
   // Configuration
   public final AtomicLong reconnectDelay = new AtomicLong(5000);
   public final AtomicLong connectTimeout = new AtomicLong(5000);
+  public final AtomicInteger maxInflightRequests = new AtomicInteger(2048);
   public final InetSocketAddress address;
   public final AtomicReference<SSLContext> sslContext =
     new AtomicReference<SSLContext>();
@@ -96,12 +97,12 @@ public class TcpTransport implements AsynchronousTransport {
         return true;
       }
     }
-    
+
     return false;
   }
 
   // Builds a new SSLHandler
-  public SslHandler sslHandler() { 
+  public SslHandler sslHandler() {
     final SSLContext context = sslContext.get();
     if (context == null) {
       return null;
@@ -151,16 +152,18 @@ public class TcpTransport implements AsynchronousTransport {
             // TLS
             final SslHandler sslHandler = sslHandler();
             if (sslHandler != null) {
-              p.addLast("tls", sslHandler); 
+              p.addLast("tls", sslHandler);
             }
-            
+
             // Normal codec
             p.addLast("frame-decoder", new LengthFieldBasedFrameDecoder(
                 Integer.MAX_VALUE, 0, 4, 0, 4));
             p.addLast("frame-encoder", frameEncoder);
             p.addLast("protobuf-decoder", pbDecoder);
             p.addLast("protobuf-encoder", pbEncoder);
-            p.addLast("handler", new TcpHandler(channels, exceptionReporter));
+            p.addLast("handler", new TcpHandler(channels,
+                                                exceptionReporter,
+                                                maxInflightRequests));
 
             return p;
           }});
