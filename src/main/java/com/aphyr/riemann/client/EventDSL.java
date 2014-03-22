@@ -170,10 +170,10 @@ public class EventDSL {
     }
 
     public Boolean sendWithAck() throws IOException, ServerError, MsgTooLargeException {
-        return client.sendEventsWithAck(build());
+      return client.sendEventsWithAck(build());
     }
 
     public IPromise send() {
-        client.aSendEventsWithAck(build());
+      return client.aSendEventsWithAck(build());
     }
 }

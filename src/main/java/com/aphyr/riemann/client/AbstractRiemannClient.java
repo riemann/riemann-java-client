@@ -34,7 +34,7 @@ public abstract class AbstractRiemannClient implements DualTransport {
   public abstract void disconnect() throws IOException;
   public abstract void reconnect() throws IOException;
   public abstract void flush() throws IOException;
-  
+
   // A new event DSL bound to this client.
   public EventDSL event() {
     return new EventDSL(this);

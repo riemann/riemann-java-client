@@ -2,6 +2,7 @@ package com.codahale.metrics.riemann;
 
 import com.aphyr.riemann.client.AbstractRiemannClient;
 import com.aphyr.riemann.client.EventDSL;
+import com.aphyr.riemann.client.Promise;
 
 import com.codahale.metrics.*;
 import com.codahale.metrics.Timer;
@@ -25,7 +26,13 @@ public class RiemannReporterTest {
     private final Clock clock = mock(Clock.class);
     private final EventDSL eventDSL = mock(EventDSL.class, new Answer() {
      public Object answer(InvocationOnMock invocation) {
+       if (invocation.getMethod().getName() == "send") {
+         // We don't actually look for completion of the promise.
+         return new Promise();
+       } else {
+         // Builder-style continuation
          return invocation.getMock();
+       }
      }
     });
     private final AbstractRiemannClient client = mock(AbstractRiemannClient.class);
