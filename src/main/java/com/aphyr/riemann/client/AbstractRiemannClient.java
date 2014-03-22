@@ -102,7 +102,7 @@ public abstract class AbstractRiemannClient implements DualTransport {
       // Fuck it.
     }
   }
-  
+
   // Sends events in fire-and-forget fashion. Doesn't check server response,
   // swallows all exceptions silently. No guarantees on delivery.
   public void sendEvents(final Event... events) {

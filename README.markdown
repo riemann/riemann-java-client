@@ -31,19 +31,50 @@ c.event().
 
 c.query("tagged \"cold\" and metric > 0"); // => List<Event>;
 c.disconnect();
-``` 
+```
 
-# Status
+Clients will automatically attempt to reconnect every 5 seconds. Writes will
+fail instantaneously when no connection is available.
 
-The TCP client is in its early stages; it does not handle server error
-responses correctly and offers no pooling or retries. The top-level API for
-sending events and querying the index is functional and threadsafe. A small DSL
-is available to make sending events easier.
+`.send()` proceeds asynchronously and returns as soon as Netty flushes the
+write possible. `.send()` returns a `com.aphyr.riemann.client.IPromise`
+containing the response from the write (which also supports Clojure's Deref
+protocol). If you do not deref this promise, the client makes *no* guarantees
+about event delivery: it will, for example, discard writes when there are too
+many messages outstanding on the wire, when Riemann cannot keep up with load,
+and so on. You *should* deref and retry IOExceptions on important writes.
 
+```java
+try {
+  if (!c.event().
+      service("fridge").
+      state("running").
+      send().
+      deref(1, java.util.concurrent.TimeUnit.SECONDS)) {
+    throw new IOException("Timed out.")
+  }
+} catch (IOException e) {
+  retry();
+}
+```
 
-# Next steps
+This code blocks for 1 second before retrying, returns a Message if the write
+succeeded, null if the promise is still outstanding, and throws if a failure is
+known to have occurred. This means you can send multiple copies of an event if
+latencies exceed 1000 ms. There is no reliable way to distinguish between
+failure and delay in an asynchronous network, so think ahead. `.deref()` blocks
+indefinitely, but will return as soon as the Netty connection fails, so it may
+be the safest option when arbitrary delays are acceptable.
 
-- Set host automatically.
+Each client allows thousands of outstanding concurrent requests at any time, so
+a small number of threads can efficiently pipeline many operations over the
+same client. I suggest performing writes on a special monitoring thread or
+threads, and pushing the response futures onto a threadpoolexecutor for
+`deref`ing.
+
+For higher performance (by orders of magnitude) you can also send multiple
+events batched in a single message. Use `RiemannClient.aSendEvents(...)` to
+send multiple events at once.
 
 # Hacking
 
