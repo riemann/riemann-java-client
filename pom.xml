@@ -152,6 +152,7 @@
             <configuration>
                 <instructions>
                     <Export-Package>
+                        com.aphyr.riemann;-noimport:=true,
                         com.aphyr.riemann.client;-noimport:=true,
                         com.codahale.metrics.riemann;-noimport:=true,
                         com.yammer.metrics.reporting;-noimport:=true
