@@ -58,6 +58,7 @@ public class TcpTransport implements AsynchronousTransport {
   public final AtomicLong reconnectDelay = new AtomicLong(5000);
   public final AtomicLong connectTimeout = new AtomicLong(5000);
   public final AtomicInteger maxInflightRequests = new AtomicInteger(2048);
+  public final AtomicBoolean cacheDns = new AtomicBoolean(true);
   public final InetSocketAddress address;
   public final AtomicReference<SSLContext> sslContext =
     new AtomicReference<SSLContext>();
@@ -173,10 +174,19 @@ public class TcpTransport implements AsynchronousTransport {
             return p;
           }});
 
+
+    Resolver resolver;
+    if (cacheDns.get() == true) {
+      resolver = new CachingResolver(address);
+    } else {
+      resolver = new Resolver(address);
+    }
+
     // Set bootstrap options
     bootstrap.setOption("tcpNoDelay", true);
     bootstrap.setOption("keepAlive", true);
-    bootstrap.setOption("remoteAddress", address);
+    bootstrap.setOption("resolver", resolver);
+    bootstrap.setOption("remoteAddress", resolver.resolve());
 
     // Connect and wait for connection ready
     final ChannelFuture result = bootstrap.connect().awaitUninterruptibly();

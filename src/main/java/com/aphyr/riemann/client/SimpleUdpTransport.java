@@ -15,6 +15,10 @@ public class SimpleUdpTransport implements SynchronousTransport {
 
   private final InetSocketAddress address;
 
+  private volatile Resolver resolver;
+
+  public volatile boolean cacheDns = true;
+
   public SimpleUdpTransport(final InetSocketAddress address) {
     this.address = address;
   }
@@ -34,7 +38,7 @@ public class SimpleUdpTransport implements SynchronousTransport {
   @Override
   public com.aphyr.riemann.Proto.Msg sendMaybeRecvMessage(final com.aphyr.riemann.Proto.Msg msg) throws IOException {
     final byte[] body = msg.toByteArray();
-    final DatagramPacket packet = new DatagramPacket(body, body.length, address);
+    final DatagramPacket packet = new DatagramPacket(body, body.length, resolver.resolve());
     socket.send(packet);
     return null;
   }
@@ -51,6 +55,11 @@ public class SimpleUdpTransport implements SynchronousTransport {
 
   @Override
   public synchronized void connect() throws IOException {
+    if (cacheDns == true) {
+      this.resolver = new CachingResolver(address);
+    } else {
+      this.resolver = new Resolver(address);
+    }
     socket = new DatagramSocket();
     connected = true;
   }

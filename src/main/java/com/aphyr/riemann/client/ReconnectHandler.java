@@ -46,7 +46,8 @@ public class ReconnectHandler extends SimpleChannelUpstreamHandler {
   }
 
   InetSocketAddress getRemoteAddress() {
-    return (InetSocketAddress) bootstrap.getOption("remoteAddress");
+    Resolver resolver = (Resolver) bootstrap.getOption("resolver");
+    return resolver.resolve();
   }
 
   @Override
@@ -63,9 +64,13 @@ public class ReconnectHandler extends SimpleChannelUpstreamHandler {
       timer.newTimeout(new TimerTask() {
         public void run(Timeout timeout) throws Exception {
           if (bootstrap instanceof ClientBootstrap) {
-            ((ClientBootstrap) bootstrap).connect();
+            ClientBootstrap b = (ClientBootstrap) bootstrap;
+            b.setOption("remoteAddress", getRemoteAddress());
+            b.connect();
           } else if (bootstrap instanceof ConnectionlessBootstrap) {
-            ((ConnectionlessBootstrap) bootstrap).connect();
+            ConnectionlessBootstrap b = (ConnectionlessBootstrap) bootstrap;
+            b.setOption("remoteAddress", getRemoteAddress());
+            b.connect();
           }
         }
       }, delay.get(), unit);

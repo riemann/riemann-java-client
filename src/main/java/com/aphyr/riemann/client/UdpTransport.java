@@ -51,6 +51,7 @@ public class UdpTransport implements SynchronousTransport {
   public final AtomicLong connectTimeout = new AtomicLong(5000);
   // Changes to this value are applied only on reconnect.
   public final AtomicInteger sendBufferSize = new AtomicInteger(16384);
+  public final AtomicBoolean cacheDns = new AtomicBoolean(true);
   public final InetSocketAddress address;
 
   public volatile ExceptionReporter exceptionReporter = new ExceptionReporter() {
@@ -122,8 +123,16 @@ public class UdpTransport implements SynchronousTransport {
             return p;
           }});
 
+    Resolver resolver;
+    if (cacheDns.get() == true) {
+      resolver = new CachingResolver(address);
+    } else {
+      resolver = new Resolver(address);
+    }
+
     // Set bootstrap options
-    bootstrap.setOption("remoteAddress", address);
+    bootstrap.setOption("resolver", resolver);
+    bootstrap.setOption("remoteAddress", resolver.resolve());
     bootstrap.setOption("sendBufferSize", sendBufferSize.get());
 
     // Connect
