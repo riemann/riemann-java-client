@@ -69,7 +69,8 @@ public abstract class AbstractRiemannClient implements DualTransport {
         return true;
       }
       public Boolean deref(long time, TimeUnit unit, Boolean timeoutValue) throws IOException {
-        if (null != validate(p.deref(time, unit, null))) {
+        final Msg message = p.deref(time, unit, null);
+        if (message != null && validate(message) != null) {
           return true;
         } else {
           return false;
