@@ -4,7 +4,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.aphyr</groupId>
 	<artifactId>riemann-java-client</artifactId>
-  <version>0.2.11</version>
+  <version>0.2.12-SNAPSHOT</version>
 	<packaging>bundle</packaging>
 	<name>Riemann Java Client</name>
 	<description>Java client for http://aphyr.github.com/riemann/</description>
@@ -172,7 +172,7 @@
 
   <distributionManagement>
     <repository>
-      <id>clojars.org</id>
+      <id>clojars</id>
       <name>Clojars</name>
       <url>https://clojars.org/repo</url>
     </repository>
