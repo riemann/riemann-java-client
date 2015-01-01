@@ -17,12 +17,8 @@ public class EventDSL {
     public EventDSL(AbstractRiemannClient client) {
         this.client = client;
         this.builder = Event.newBuilder();
-        try {
-            this.builder.setHost(java.net.InetAddress.getLocalHost().getHostName());
-        } catch (java.net.UnknownHostException e) {
-            // If we can't get the local host, a null host is perfectly
-            // acceptable.  Caller will know soon enough. :)
-        }
+
+        this.builder.setHost(LocalhostResolver.getResolvedHostname());
     }
 
     public EventDSL host(String host) {
