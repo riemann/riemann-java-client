@@ -57,6 +57,7 @@ public class TcpTransport implements AsynchronousTransport {
   // Configuration
   public final AtomicLong reconnectDelay = new AtomicLong(5000);
   public final AtomicLong connectTimeout = new AtomicLong(5000);
+  public final AtomicLong writeTimeout   = new AtomicLong(5000);
   public final AtomicInteger maxInflightRequests = new AtomicInteger(2048);
   public final AtomicBoolean cacheDns = new AtomicBoolean(true);
   public final InetSocketAddress address;
@@ -169,7 +170,7 @@ public class TcpTransport implements AsynchronousTransport {
             p.addLast("protobuf-decoder", pbDecoder);
             p.addLast("protobuf-encoder", pbEncoder);
             p.addLast("channelgroups", new ChannelGroupHandler(channels));
-            p.addLast("handler", new TcpHandler(exceptionReporter, maxInflightRequests));
+            p.addLast("handler", new TcpHandler(exceptionReporter));
 
             return p;
           }});
@@ -230,31 +231,65 @@ public class TcpTransport implements AsynchronousTransport {
     connect();
   }
 
-  // An Noop
   @Override
   public void flush() throws IOException {
+  // TODO: in Netty 4
+  //    channels.flush().sync();
   }
 
-  // Write a messag to any handler and return a promise to be fulfilled by
+  // Write a message to any handler and return a promise to be fulfilled by
   // the corresponding response Msg.
   public IPromise<Msg> sendMessage(final Msg msg) {
     return sendMessage(msg, new Promise<Msg>());
   }
 
   // Write a message to any available handler, fulfilling a specific promise.
-  public Promise<Msg> sendMessage(final Msg msg,
-      final Promise<Msg> promise) {
-    if (state == State.CONNECTED) {
-      final Write write = new Write(msg, promise);
-      // Write to any channel
-      for (Channel channel : channels) {
-        channel.write(new Write(msg, promise));
-        return promise;
-      }
-      promise.deliver(new IOException("No channels available."));
-    } else {
-      promise.deliver(new IOException("Not connected."));
+  public Promise<Msg> sendMessage(final Msg msg, final Promise<Msg> promise) {
+    if (state != State.CONNECTED) {
+      promise.deliver(new IOException("client not connected"));
+      return promise;
     }
+
+    final Write write = new Write(msg, promise);
+
+    // Spin until channels are writable or there's none left.
+    final long t1 = System.nanoTime();
+
+    final TimeUnit u = TimeUnit.MILLISECONDS;
+    final long x = writeTimeout.get();
+    final long y = TimeUnit.MILLISECONDS.toNanos(writeTimeout.get());
+
+    try {
+      while((System.nanoTime() - t1) <
+          TimeUnit.MILLISECONDS.toNanos(writeTimeout.get())) {
+
+        if (channels.size() == 0) {
+          promise.deliver(new IOException("no channels available"));
+          return promise;
+        }
+
+        for (Channel channel : channels) {
+          if (channel.isWritable()) {
+            channel.write(write);
+            return promise;
+          }
+        }
+
+        // Nope, nobody's writable yet. Apply backpressure to this thread.
+        Thread.sleep(1);
+      }
+    } catch (InterruptedException e) {
+       // OK we're done
+    }
+
+    // If we spin indefinitely we could conceivably prevent threads from
+    // making progress, so we'll deliver an OverloadedException here and
+    // bail.
+    final long waited = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - t1);
+    promise.deliver(
+        new OverloadedException(
+          "all local channels full, gave up waiting for a channel after " +
+          waited + " milliseconds to avoid deadlock"));
     return promise;
   }
 

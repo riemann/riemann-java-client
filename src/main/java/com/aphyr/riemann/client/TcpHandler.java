@@ -25,18 +25,14 @@ import java.util.concurrent.LinkedBlockingQueue;
 public class TcpHandler extends SimpleChannelHandler {
   public final WriteQueue queue = new WriteQueue();
 
-  public final AtomicInteger maxInflightRequests;
-
   // The last error used to fulfill outstanding promises.
   public volatile IOException lastError =
     new IOException("Channel closed.");
 
   public final ExceptionReporter exceptionReporter;
 
-  public TcpHandler(final ExceptionReporter exceptionReporter,
-                    final AtomicInteger maxInflightRequests) {
+  public TcpHandler(final ExceptionReporter exceptionReporter) {
     this.exceptionReporter = exceptionReporter;
-    this.maxInflightRequests = maxInflightRequests;
   }
 
   // When we open, add our channel to the channel group.
@@ -84,14 +80,6 @@ public class TcpHandler extends SimpleChannelHandler {
     final Write write = (Write) me.getMessage();
     final Msg message = write.message;
     final Promise promise = write.promise;
-
-    // If we're over capacity, abort the promise and drop the message here.
-    if (maxInflightRequests.get() <= queue.size) {
-      promise.deliver(
-          new OverloadedException("Too many requests in flight")
-      );
-      return;
-    }
 
     // When the message event is written...
     me.getFuture().addListener(new ChannelFutureListener() {
