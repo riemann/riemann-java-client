@@ -1,6 +1,6 @@
 package com.codahale.metrics.riemann;
 
-import com.aphyr.riemann.client.AbstractRiemannClient;
+import com.aphyr.riemann.client.IRiemannClient;
 import com.aphyr.riemann.client.EventDSL;
 import com.aphyr.riemann.client.Promise;
 
@@ -35,7 +35,7 @@ public class RiemannReporterTest {
        }
      }
     });
-    private final AbstractRiemannClient client = mock(AbstractRiemannClient.class);
+    private final IRiemannClient client = mock(IRiemannClient.class);
     private final Riemann riemann = spy(new Riemann(client));
     private final MetricRegistry registry = mock(MetricRegistry.class);
     private final RiemannReporter reporter = RiemannReporter.forRegistry(registry)

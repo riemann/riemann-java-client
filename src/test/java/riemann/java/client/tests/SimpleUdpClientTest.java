@@ -26,7 +26,7 @@ public class SimpleUdpClientTest {
         client.connect();
         sendTestMessages(serverSocket, client);
       } finally {
-        client.disconnect();
+        client.close();
       }
     } finally {
       serverSocket.close();
@@ -49,7 +49,7 @@ public class SimpleUdpClientTest {
 
         // Expect send to drop messages silently
         final Proto.Event e = Util.createEvent();
-        client.sendEvents(e);
+        client.sendEvent(e);
 
         // Reopen listening socket
         serverSocket = new DatagramSocket(new InetSocketAddress(port));
@@ -58,7 +58,7 @@ public class SimpleUdpClientTest {
         sendTestMessages(serverSocket, client);
 
       } finally {
-        client.disconnect();
+        client.close();
         assertFalse(client.isConnected());
       }
     } finally {
@@ -71,7 +71,7 @@ public class SimpleUdpClientTest {
       final byte[] buffer = new byte[16384];
       final DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
       final Proto.Event e = Util.createEvent();
-      client.sendEvents(e);
+      client.sendEvent(e);
       serverSocket.receive(packet);
       final Proto.Msg msg = Proto.Msg.getDefaultInstance().newBuilderForType().mergeFrom(packet.getData(), 0, packet.getLength()).build();
       assertEquals(e, Util.soleEvent(msg));

@@ -17,8 +17,8 @@
 
 package com.codahale.metrics.riemann;
 
+import com.aphyr.riemann.client.IRiemannClient;
 import com.aphyr.riemann.client.RiemannClient;
-import com.aphyr.riemann.client.AbstractRiemannClient;
 import com.aphyr.riemann.client.RiemannBatchClient;
 import com.aphyr.riemann.client.UnsupportedJVMException;
 
@@ -29,7 +29,7 @@ import java.io.IOException;
 
 public class Riemann implements Closeable {
 
-    AbstractRiemannClient client;
+    IRiemannClient client;
 
     public Riemann(String host, Integer port) throws IOException {
         this(host, port, 10);
@@ -39,16 +39,16 @@ public class Riemann implements Closeable {
         this(getClient(host, port, batchSize));
     }
 
-    private static AbstractRiemannClient getClient(String host, Integer port, int batchSize) throws IOException {
-        RiemannClient c = RiemannClient.tcp(host, port);
+    private static IRiemannClient getClient(String host, Integer port, int batchSize) throws IOException {
+        IRiemannClient c = RiemannClient.tcp(host, port);
         try {
-            return new RiemannBatchClient(batchSize, c);
+            return new RiemannBatchClient(c, batchSize);
         } catch (UnsupportedJVMException e) {
             return c;
         }
     }
 
-    public Riemann(AbstractRiemannClient client) {
+    public Riemann(IRiemannClient client) {
         this.client = client;
     }
 
@@ -61,7 +61,7 @@ public class Riemann implements Closeable {
     @Override
     public void close() throws IOException {
         if (client != null) {
-            client.disconnect();
+            client.close();
         }
 
     }

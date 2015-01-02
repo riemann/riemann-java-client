@@ -2,6 +2,7 @@ package com.aphyr.riemann.client;
 
 import com.aphyr.riemann.Proto.Attribute;
 import com.aphyr.riemann.Proto.Event;
+import com.aphyr.riemann.Proto.Msg;
 
 import java.util.Arrays;
 import java.util.List;
@@ -10,11 +11,11 @@ import java.util.HashMap;
 import java.io.IOException;
 
 public class EventDSL {
-    public final AbstractRiemannClient client;
+    public final IRiemannClient client;
     public final Event.Builder builder;
     public final Map<String, String> attributes = new HashMap<String, String>();
 
-    public EventDSL(AbstractRiemannClient client) {
+    public EventDSL(IRiemannClient client) {
         this.client = client;
         this.builder = Event.newBuilder();
         try {
@@ -169,11 +170,7 @@ public class EventDSL {
       return builder.build();
     }
 
-    public Boolean sendWithAck() throws IOException, ServerError, MsgTooLargeException {
-      return client.sendEventsWithAck(build());
-    }
-
-    public IPromise send() {
-      return client.aSendEventsWithAck(build());
+    public IPromise<Msg> send() {
+      return client.sendEvent(build());
     }
 }

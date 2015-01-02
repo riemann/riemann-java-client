@@ -14,7 +14,7 @@ package com.aphyr.riemann.client;
 // There is no guarantee as to *which* events were successfully received. Since
 // Riemann considers almost every event valid, and will only return failures in
 // the event of resource problems, this should be acceptable for most
-// scenarios. 
+// scenarios.
 //
 // To maximize throughput, BatchingRiemannClient is purely reactive, lockfree,
 // and makes no guarantees about event latency. Latency of sendEvents() may vary
@@ -32,86 +32,84 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.LinkedTransferQueue;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import com.aphyr.riemann.Proto.Msg;
 import com.aphyr.riemann.Proto.Event;
 import java.io.IOException;
 import java.net.UnknownHostException;
 
-public class RiemannBatchClient extends AbstractRiemannClient {
+public class RiemannBatchClient implements IRiemannClient {
   public final int batchSize;
   public final AtomicInteger bufferSize = new AtomicInteger();
   public final LinkedTransferQueue<Write> buffer;
-  public final AbstractRiemannClient client;
+  public final IRiemannClient client;
 
   // Maximum time, in ms, we can wait for an event to be processed.
   public final AtomicLong readPromiseTimeout = new AtomicLong(5000);
 
-  // Used when we don't care about results.
-  public final Promise<Boolean> blackhole = new Promise<Boolean>();
-
-  public RiemannBatchClient(final AbstractRiemannClient client) throws
-    UnknownHostException, UnsupportedJVMException {
-    this(10, client);
+  public RiemannBatchClient(final IRiemannClient client)
+                           throws UnsupportedJVMException {
+    this(client, 10);
   }
 
-  public RiemannBatchClient(final int batchSize, final AbstractRiemannClient
-      client) throws UnknownHostException, UnsupportedJVMException {
-    this.batchSize = batchSize;
+  public RiemannBatchClient(final IRiemannClient client,
+                            final int batchSize)
+                           throws UnsupportedJVMException {
     this.client = client;
+    this.batchSize = batchSize;
     this.buffer = new java.util.concurrent.LinkedTransferQueue<Write>();
   }
 
-  // Fire and forget. No guarantees on delivery.
-  public void sendEvents(final List<Event> events) {
-    try {
-      for (Event event : events) {
-        queue(new Write(event, blackhole));
-      }
-    } catch (IOException e) {
-      // too bad
-    }
+  @Override
+  public IPromise<Msg> sendMessage(final Msg message) {
+    return client.sendMessage(message);
   }
 
-  // Blocks until all events have been received. Throws if any event was *not*
-  // acknowledged.
-  public Boolean sendEventsWithAck(final List<Event> events) throws
-    IOException, ServerError, MsgTooLargeException {
+  @Override
+  public IPromise<Msg> sendEvents(final List<Event> events) {
+    final ChainPromise<Msg> p = new ChainPromise<Msg>();
 
-    final ArrayList<Promise<Boolean>> promises = 
-      new ArrayList<Promise<Boolean>>(events.size());
-
-    // Queue events
-    Write write;
+    // Queue up all events with this IPromise.
     for (Event event : events) {
-      write = new Write(event);
-      promises.add(write.promise);
-      queue(write);
+      queue(new Write(event, p));
     }
 
-    // Await promises
-    for (Promise<Boolean> promise : promises) {
-      try {
-        if (! promise.deref(readPromiseTimeout.get(), 
-              TimeUnit.MILLISECONDS, false)) {
-          throw new IOException("Timed out waiting for response promise.");
-        }
-      } catch (RuntimeException e) {
-        if (e.getCause() instanceof ServerError) {
-          throw (ServerError) e.getCause();
-        }
-        throw e;
-      }
-    }
+    return p;
+  }
 
-    return true;
+  @Override
+  public IPromise<Msg> sendEvents(final Event... events) {
+    return sendEvents(Arrays.asList(events));
+  }
+
+  @Override
+  public IPromise<Msg> sendEvent(final Event event) {
+    final ChainPromise<Msg> p = new ChainPromise<Msg>();
+    queue(new Write(event, p));
+    return p;
+  }
+
+  @Override
+  public IPromise<Msg> sendException(final String service, final Throwable t) {
+    return RiemannClient.sendException(this, service, t);
+  }
+
+  @Override
+  public IPromise<List<Event>> query(final String q) {
+    return client.query(q);
+  }
+
+  @Override
+  public EventDSL event() {
+    return new EventDSL(this);
   }
 
   // Hey, I just called you
   // And this is crazy
   // But take this event
   // And flush queues maybe
-  public void queue(final Write write) throws IOException {
+  public void queue(final Write write) {
     buffer.put(write);
     if (batchSize <= bufferSize.addAndGet(1)) {
       flush();
@@ -123,68 +121,36 @@ public class RiemannBatchClient extends AbstractRiemannClient {
   // promises.
   public int flush2() {
     final int maxWrites = Math.min(batchSize, bufferSize.get());
+
     // Allocate space for writes
     final ArrayList<Write> writes = new ArrayList<Write>(maxWrites);
+
     // Suck down elements from queue
     buffer.drainTo(writes, maxWrites);
+
     // Update count
     bufferSize.addAndGet(-1 * writes.size());
 
-    try {
-      // Build message
-      final Msg.Builder message = Msg.newBuilder();
-      for (Write write : writes) {
-        message.addEvents(write.event);
-      }
+    // Build message
+    final Msg.Builder message = Msg.newBuilder();
+    for (Write write : writes) {
+      message.addEvents(write.event);
+    }
 
-      // Send message
-      validate(
-          sendRecvMessage(
-            message.build()));
+    // Send message
+    final IPromise<Msg> clientPromise = client.sendMessage(message.build());
 
-      // Fulfill promises
-      for (Write write : writes) {
-        write.promise.deliver(true);
-      }
-    } catch (RuntimeException e) {
-      // Deliver runtime exceptions
-      for (Write write : writes) {
-        write.promise.deliver(e);
-      }
-    } catch (Throwable t) {
-      // Wrap and deliver any other exceptions
-      final RuntimeException ex = new RuntimeException(t);
-      for (Write write : writes) {
-        write.promise.deliver(ex);
-      }
+    // And hook up all the response promises
+    for (Write write : writes) {
+      write.promise.attach(clientPromise);
     }
 
     return writes.size();
   }
 
   @Override
-  public void flush() throws IOException {
+  public void flush() {
     flush2();
-  }
-
-  @Override
-  public Msg sendRecvMessage(final Msg message) throws IOException {
-    return client.sendRecvMessage(message);
-  }
-
-  @Override
-  public Msg sendMaybeRecvMessage(final Msg message) throws IOException {
-    return client.sendMaybeRecvMessage(message);
-  }
-  
-  @Override
-  public IPromise<Msg> aSendRecvMessage(final Msg message) {
-    return client.aSendRecvMessage(message);
-  }
-
-  @Override
-  public IPromise<Msg> aSendMaybeRecvMessage(final Msg message) {
-    return client.aSendMaybeRecvMessage(message);
   }
 
   @Override
@@ -198,11 +164,11 @@ public class RiemannBatchClient extends AbstractRiemannClient {
   }
 
   @Override
-  public void disconnect() throws IOException {
+  public void close() {
     try {
       flush();
     } finally {
-      client.disconnect();
+      client.close();
     }
   }
 
@@ -211,19 +177,20 @@ public class RiemannBatchClient extends AbstractRiemannClient {
     client.reconnect();
   }
 
+  // Returns the underlying client
+  @Override
+  public Transport transport() {
+    return client;
+  }
+
   // Combines an Event with a promise to fulfill when received.
   public class Write {
     public final Event event;
-    public final Promise<Boolean> promise;
+    public final ChainPromise<Msg> promise;
 
-    public Write(final Event event, final Promise promise) {
+    public Write(final Event event, final ChainPromise promise) {
       this.event = event;
       this.promise = promise;
-    }
-
-    public Write(final Event event) {
-      this.event = event;
-      this.promise = new Promise<Boolean>();
     }
   }
 }

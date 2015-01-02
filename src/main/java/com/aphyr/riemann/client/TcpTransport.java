@@ -204,11 +204,11 @@ public class TcpTransport implements AsynchronousTransport {
   }
 
   @Override
-  public void disconnect() throws IOException {
-    disconnect(false);
+  public void close() {
+    close(false);
   }
 
-  public synchronized void disconnect(boolean force) throws IOException {
+  public synchronized void close(boolean force) {
     if (!(force || state == State.CONNECTED)) {
       return;
     }
@@ -225,8 +225,8 @@ public class TcpTransport implements AsynchronousTransport {
   }
 
   @Override
-  public void reconnect() throws IOException {
-    disconnect();
+  public synchronized void reconnect() throws IOException {
+    close();
     connect();
   }
 
@@ -235,8 +235,14 @@ public class TcpTransport implements AsynchronousTransport {
   public void flush() throws IOException {
   }
 
-  // Write a message to any available handler and return promise.
-  public Promise<Msg> write(final Msg msg, 
+  // Write a messag to any handler and return a promise to be fulfilled by
+  // the corresponding response Msg.
+  public IPromise<Msg> sendMessage(final Msg msg) {
+    return sendMessage(msg, new Promise<Msg>());
+  }
+
+  // Write a message to any available handler, fulfilling a specific promise.
+  public Promise<Msg> sendMessage(final Msg msg,
       final Promise<Msg> promise) {
     if (state == State.CONNECTED) {
       final Write write = new Write(msg, promise);
@@ -253,12 +259,7 @@ public class TcpTransport implements AsynchronousTransport {
   }
 
   @Override
-  public Promise<Msg> aSendRecvMessage(final Msg msg) {
-    return write(msg, new Promise<Msg>());
-  }
-
-  @Override
-  public Promise<Msg> aSendMaybeRecvMessage(final Msg msg) {
-    return aSendRecvMessage(msg);
+  public Transport transport() {
+    return null;
   }
 }

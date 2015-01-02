@@ -31,12 +31,13 @@ public class TcpClientTest {
       client.connect();
       for (int i = 0; i < 10; i++) {
         final Event e = Util.createEvent();
-        assertEquals(true, client.sendEventsWithAck(e));
+        final Msg rsp = client.sendEvent(e).deref();
+        assertEquals(true, !rsp.hasOk() || rsp.getOk());
         assertEquals(e, Util.soleEvent(server.received.poll()));
       }
     } finally {
       if (client != null) {
-        client.disconnect();
+        client.close();
       }
       server.stop();
     }
@@ -50,14 +51,14 @@ public class TcpClientTest {
       client = RiemannClient.tcp(server.start());
       client.connect();
       for (int i = 0; i < 10; i++) {
-        final List<Event> events = client.query("hi");
+        final List<Event> events = client.query("hi").deref();
         assertEquals(0, events.size());
         final Msg m = server.received.poll();
         assertEquals("hi", m.getQuery().getString());
       }
     } finally {
       if (client != null) {
-        client.disconnect();
+        client.close();
       }
       server.stop();
     }

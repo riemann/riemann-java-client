@@ -5,7 +5,7 @@ package com.aphyr.riemann.client;
 import com.aphyr.riemann.Proto.Msg;
 import java.io.IOException;
 
-public class AsynchronizeTransport implements DualTransport {
+public class AsynchronizeTransport implements AsynchronousTransport {
   public final SynchronousTransport transport;
 
   public AsynchronizeTransport(final SynchronousTransport transport) {
@@ -13,10 +13,17 @@ public class AsynchronizeTransport implements DualTransport {
   }
 
   // Asynchronous path
-  public Promise<Msg> aSendRecvMessage(final Msg msg) {
+  public Promise<Msg> sendMessage(final Msg msg) {
     final Promise<Msg> p = new Promise<Msg>();
+
     try {
-      p.deliver(transport.sendRecvMessage(msg));
+      final Msg response = transport.sendMessage(msg);
+      if (response == null) {
+        p.deliver(new UnsupportedOperationException(
+              transport.toString() + " doesn't support receiving messages."));
+      } else {
+        p.deliver(response);
+      }
     } catch (IOException e) {
       p.deliver(e);
     } catch (RuntimeException e) {
@@ -25,44 +32,33 @@ public class AsynchronizeTransport implements DualTransport {
     return p;
   }
 
-  public Promise<Msg> aSendMaybeRecvMessage(final Msg msg) {
-    final Promise<Msg> p = new Promise<Msg>();
-    try {
-      p.deliver(transport.sendMaybeRecvMessage(msg));
-    } catch (IOException e) {
-      p.deliver(e);
-    } catch (RuntimeException e) {
-      p.deliver(e);
-    }
-    return p;
-  }
-  
-  // Synchronous path
-  public Msg sendRecvMessage(final Msg msg) throws IOException {
-    return transport.sendRecvMessage(msg);
-  }
-
-  public Msg sendMaybeRecvMessage(final Msg msg) throws IOException {
-    return transport.sendMaybeRecvMessage(msg);
+  @Override
+  public SynchronousTransport transport() {
+    return transport;
   }
 
   // Lifecycle
+  @Override
   public boolean isConnected() {
     return transport.isConnected();
   }
 
+  @Override
   public void connect() throws IOException {
     transport.connect();
   }
 
-  public void disconnect() throws IOException {
-    transport.disconnect();
+  @Override
+  public void close() {
+    transport.close();
   }
 
+  @Override
   public void reconnect() throws IOException {
     transport.reconnect();
   }
 
+  @Override
   public void flush() throws IOException {
     transport.flush();
   }

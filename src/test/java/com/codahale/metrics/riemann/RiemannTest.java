@@ -1,14 +1,13 @@
-
 package com.codahale.metrics.riemann;
 
-import com.aphyr.riemann.client.AbstractRiemannClient;
+import com.aphyr.riemann.client.IRiemannClient;
 
 import org.junit.Test;
 
 import static org.mockito.Mockito.*;
 
 public class RiemannTest {
-    private final AbstractRiemannClient client = mock(AbstractRiemannClient.class);
+    private final IRiemannClient client = mock(IRiemannClient.class);
     private final Riemann riemann = new Riemann(client);
 
     @Test
@@ -21,7 +20,7 @@ public class RiemannTest {
     public void disconnectsFromRiemann() throws Exception {
         riemann.connect();
         riemann.close();
-        verify(client).disconnect();
+        verify(client).close();
     }
 }
 

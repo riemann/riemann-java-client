@@ -7,18 +7,18 @@ import java.util.concurrent.TimeUnit;
 // Supports periodic reporting of events.
 public class RiemannScheduler {
     public static abstract class Task {
-        public abstract void run(AbstractRiemannClient r);
+        public abstract void run(IRiemannClient r);
     }
 
     public final ScheduledThreadPoolExecutor pool;
-    public final AbstractRiemannClient client;
+    public final IRiemannClient client;
 
-    public RiemannScheduler(AbstractRiemannClient client) {
+    public RiemannScheduler(final IRiemannClient client) {
         this(client, 1);
     }
 
     // Finer control over threadpool
-    public RiemannScheduler(AbstractRiemannClient client, int poolSize) {
+    public RiemannScheduler(final IRiemannClient client, int poolSize) {
         this.client = client;
         pool = new ScheduledThreadPoolExecutor(poolSize);
         pool.setContinueExistingPeriodicTasksAfterShutdownPolicy(false);

@@ -6,6 +6,8 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 
+import com.aphyr.riemann.Proto.Msg;
+
 public class SimpleUdpTransport implements SynchronousTransport {
 
   public static final int DEFAULT_PORT = 5555;
@@ -36,16 +38,12 @@ public class SimpleUdpTransport implements SynchronousTransport {
   }
 
   @Override
-  public com.aphyr.riemann.Proto.Msg sendMaybeRecvMessage(final com.aphyr.riemann.Proto.Msg msg) throws IOException {
+  public Msg sendMessage(final Msg msg) throws IOException {
     final byte[] body = msg.toByteArray();
     final DatagramPacket packet = new DatagramPacket(body, body.length, resolver.resolve());
     socket.send(packet);
-    return null;
-  }
 
-  @Override
-  public com.aphyr.riemann.Proto.Msg sendRecvMessage(final com.aphyr.riemann.Proto.Msg msg) throws IOException {
-    throw new UnsupportedOperationException("UDP transport doesn't support receiving messages");
+    return null;
   }
 
   @Override
@@ -65,7 +63,7 @@ public class SimpleUdpTransport implements SynchronousTransport {
   }
 
   @Override
-  public synchronized void disconnect() throws IOException {
+  public synchronized void close() {
     try {
       socket.close();
     } finally {
@@ -76,12 +74,17 @@ public class SimpleUdpTransport implements SynchronousTransport {
 
   @Override
   public void reconnect() throws IOException {
-    disconnect();
+    close();
     connect();
   }
 
   @Override
   public void flush() throws IOException {
     // Noop
+  }
+
+  @Override
+  public Transport transport() {
+    return null;
   }
 }

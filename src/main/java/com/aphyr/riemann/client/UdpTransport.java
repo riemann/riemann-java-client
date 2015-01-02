@@ -140,7 +140,7 @@ public class UdpTransport implements SynchronousTransport {
     
     // Check for errors.
     if (! result.isSuccess()) {
-      disconnect(true);
+      close(true);
       throw new IOException("Connection failed", result.getCause());
     }
 
@@ -149,11 +149,11 @@ public class UdpTransport implements SynchronousTransport {
   }
 
   @Override
-  public void disconnect() throws IOException {
-    disconnect(false);
+  public void close() {
+    close(false);
   }
 
-  public synchronized void disconnect(boolean force) throws IOException {
+  public synchronized void close(boolean force) {
     if (!(force || state == State.CONNECTED)) {
       return;
     }
@@ -168,7 +168,7 @@ public class UdpTransport implements SynchronousTransport {
 
       // Close channel
       try {
-          channels.close().awaitUninterruptibly();
+        channels.close().awaitUninterruptibly();
       } finally {
 
         // Stop bootstrap
@@ -184,7 +184,7 @@ public class UdpTransport implements SynchronousTransport {
 
   @Override
   public void reconnect() throws IOException {
-    disconnect();
+    close();
     connect();
   }
 
@@ -194,18 +194,15 @@ public class UdpTransport implements SynchronousTransport {
   }
 
   @Override
-  public Msg sendRecvMessage(final Msg msg) {
-    throw new UnsupportedOperationException("UDP transport doesn't support receiving messages");
-  }
-
-  @Override
-  public Msg sendMaybeRecvMessage(final Msg msg) {
+  public Msg sendMessage(final Msg msg) {
     channels.write(msg);
     return null;
   }
 
-
-
+  @Override
+  public Transport transport() {
+    return null;
+  }
 
   public class DiscardHandler extends SimpleChannelHandler {
     @Override
