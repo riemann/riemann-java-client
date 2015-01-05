@@ -91,7 +91,7 @@ public class ReconnectHandler extends SimpleChannelUpstreamHandler {
   @Override
   public void exceptionCaught(ChannelHandlerContext c, ExceptionEvent e) {
     final Throwable cause = e.getCause();
-    
+
     if (cause instanceof ConnectException) {
       startTime = -1;
     } else if (cause instanceof ReadTimeoutException) {

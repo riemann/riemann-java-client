@@ -22,6 +22,7 @@ public abstract class Server {
 	public InetSocketAddress start() throws IOException {
 		this.port = 9800 + new Random().nextInt(100);
     this.serverSocket = new ServerSocket(this.port);
+    this.serverSocket.setReceiveBufferSize(100);
 		this.thread = mainThread(this.serverSocket);
 		this.thread.start();
 

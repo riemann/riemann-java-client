@@ -4,6 +4,7 @@ import com.aphyr.riemann.Proto.Msg;
 import java.io.*;
 import java.net.*;
 import java.net.InetSocketAddress;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
@@ -25,6 +26,7 @@ import org.jboss.netty.util.HashedWheelTimer;
 import org.jboss.netty.util.Timer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import java.lang.reflect.Field;
 
 public class TcpTransport implements AsynchronousTransport {
   // Logger
@@ -53,12 +55,14 @@ public class TcpTransport implements AsynchronousTransport {
   public final ChannelGroup channels = new DefaultChannelGroup();
   public volatile Timer timer;
   public volatile ClientBootstrap bootstrap;
+  public volatile Semaphore writeLimiter = new Semaphore(8192);
 
   // Configuration
-  public final AtomicLong reconnectDelay = new AtomicLong(5000);
-  public final AtomicLong connectTimeout = new AtomicLong(5000);
-  public final AtomicLong writeTimeout   = new AtomicLong(5000);
-  public final AtomicInteger maxInflightRequests = new AtomicInteger(2048);
+  public final AtomicLong    reconnectDelay = new AtomicLong(5000);
+  public final AtomicInteger connectTimeout = new AtomicInteger(5000);
+  public final AtomicInteger writeTimeout   = new AtomicInteger(0);
+  public final AtomicInteger writeBufferHigh = new AtomicInteger(1);
+  public final AtomicInteger writeBufferLow  = new AtomicInteger(0);
   public final AtomicBoolean cacheDns = new AtomicBoolean(true);
   public final InetSocketAddress address;
   public final AtomicReference<SSLContext> sslContext =
@@ -89,6 +93,17 @@ public class TcpTransport implements AsynchronousTransport {
 
   public TcpTransport(final int port) throws IOException {
     this(InetAddress.getLocalHost().getHostAddress(), port);
+  }
+
+
+  // Set the number of outstanding writes allowed at any time.
+  public synchronized TcpTransport setWriteBufferLimit(final int limit) {
+    if (isConnected()) {
+      throw new IllegalStateException("can't modify the write buffer limit of a connected transport; please set the limit before connecting");
+    }
+
+    writeLimiter = new Semaphore(limit);
+    return this;
   }
 
   @Override
@@ -149,7 +164,7 @@ public class TcpTransport implements AsynchronousTransport {
         new ChannelPipelineFactory() {
           public ChannelPipeline getPipeline() {
             final ChannelPipeline p = Channels.pipeline();
-            
+
             // Reconnections
             p.addLast("reconnect", new ReconnectHandler(
                 bootstrap,
@@ -186,6 +201,9 @@ public class TcpTransport implements AsynchronousTransport {
     // Set bootstrap options
     bootstrap.setOption("tcpNoDelay", true);
     bootstrap.setOption("keepAlive", true);
+    bootstrap.setOption("connectTimeoutMillis", connectTimeout.get());
+    bootstrap.setOption("writeBufferLowWaterMark", writeBufferLow.get());
+    bootstrap.setOption("writeBufferHighWaterMark", writeBufferHigh.get());
     bootstrap.setOption("resolver", resolver);
     bootstrap.setOption("remoteAddress", resolver.resolve());
 
@@ -237,6 +255,11 @@ public class TcpTransport implements AsynchronousTransport {
   //    channels.flush().sync();
   }
 
+  // Slow down requests gradually instead of slamming into the buffer limit
+  public void snooze() {
+    if limitert.
+  }
+
   // Write a message to any handler and return a promise to be fulfilled by
   // the corresponding response Msg.
   public IPromise<Msg> sendMessage(final Msg msg) {
@@ -251,45 +274,42 @@ public class TcpTransport implements AsynchronousTransport {
     }
 
     final Write write = new Write(msg, promise);
+    final Semaphore limiter = writeLimiter;
 
-    // Spin until channels are writable or there's none left.
-    final long t1 = System.nanoTime();
+    System.out.println("Limiter" + limiter);
 
-    final TimeUnit u = TimeUnit.MILLISECONDS;
-    final long x = writeTimeout.get();
-    final long y = TimeUnit.MILLISECONDS.toNanos(writeTimeout.get());
-
+    // Reserve a slot in the queue
     try {
-      while((System.nanoTime() - t1) <
-          TimeUnit.MILLISECONDS.toNanos(writeTimeout.get())) {
-
-        if (channels.size() == 0) {
-          promise.deliver(new IOException("no channels available"));
+      if (limiter.tryAcquire(writeTimeout.get(), TimeUnit.MILLISECONDS)) {
+        for (Channel channel : channels) {
+          // When the write is flushed from our local buffer, release our
+          // limiter permit.
+          ChannelFuture f = channel.write(write);
+          f.addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture f) {
+              System.out.println("Releasing");
+              limiter.release();
+            }
+          });
           return promise;
         }
 
-        for (Channel channel : channels) {
-          if (channel.isWritable()) {
-            channel.write(write);
-            return promise;
-          }
-        }
-
-        // Nope, nobody's writable yet. Apply backpressure to this thread.
-        Thread.sleep(1);
+        // No channels
+        promise.deliver(new IOException("no channels available"));
+        return promise;
       }
     } catch (InterruptedException e) {
-       // OK we're done
     }
 
-    // If we spin indefinitely we could conceivably prevent threads from
-    // making progress, so we'll deliver an OverloadedException here and
-    // bail.
-    final long waited = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - t1);
+    // No time
     promise.deliver(
         new OverloadedException(
-          "all local channels full, gave up waiting for a channel after " +
-          waited + " milliseconds to avoid deadlock"));
+          "all client channels full (" +
+          writeLimiter.availablePermits() +
+          " writes) and no space opened up in " +
+          writeTimeout.get() +
+          " ms; not blocking any further to avoid deadlock."));
     return promise;
   }
 
