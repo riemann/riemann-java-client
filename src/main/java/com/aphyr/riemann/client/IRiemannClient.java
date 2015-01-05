@@ -15,7 +15,7 @@ public interface IRiemannClient extends AsynchronousTransport {
   IPromise<Msg> sendEvents(final List<Event> events);
 
   // Send an exception as an event.
-  IPromise<Msg> sendException(final String service, Throwable t);
+  IPromise<Msg> sendException(final String service, final Throwable t);
 
   // Query the server for all events matching query. Returns a promise of a
   // list of events.
