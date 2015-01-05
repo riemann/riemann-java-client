@@ -71,9 +71,8 @@ public class TcpTransport implements AsynchronousTransport {
     new AtomicReference<SSLContext>();
 
   public volatile ExceptionReporter exceptionReporter = new ExceptionReporter() {
-    @Override
     public void reportException(final Throwable t) {
-      logger.warn("caught", t);
+      // By default, don't spam the logs.
     }
   };
 
