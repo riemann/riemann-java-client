@@ -27,9 +27,10 @@ c.event().
   state("running").
   metric(5.3).
   tags("appliance", "cold").
-  send();
+  send().
+  deref(5000, TimeUnit/MILLISECONDS);
 
-c.query("tagged \"cold\" and metric > 0"); // => List<Event>;
+c.query("tagged \"cold\" and metric > 0").deref(); // => List<Event>;
 c.disconnect();
 ```
 
@@ -42,7 +43,11 @@ containing the response from the write (which also supports Clojure's Deref
 protocol). If you do not deref this promise, the client makes *no* guarantees
 about event delivery: it will, for example, discard writes when there are too
 many messages outstanding on the wire, when Riemann cannot keep up with load,
-and so on. You *should* deref and retry IOExceptions on important writes.
+and so on. You *should* deref sends at some point, if for no other reason than to handle backpressure.
+
+Calling `.deref()` will throw a ServerException if the server responds with an
+error, or other Runtime/IOExceptions for error conditions, like a channel being
+disconnected, etc.
 
 ```java
 try {
@@ -53,7 +58,7 @@ try {
       deref(1, java.util.concurrent.TimeUnit.SECONDS)) {
     throw new IOException("Timed out.")
   }
-} catch (IOException e) {
+} catch (Exception e) {
   retry();
 }
 ```
@@ -73,8 +78,11 @@ threads, and pushing the response futures onto a threadpoolexecutor for
 `deref`ing.
 
 For higher performance (by orders of magnitude) you can also send multiple
-events batched in a single message. Use `RiemannClient.aSendEvents(...)` to
-send multiple events at once.
+events batched in a single message. Use `RiemannClient.sendEvents(...)` to send
+multiple events at once.
+
+To automatically batch events, wrap any IRiemannClient in a RiemannBatchClient,
+which automatically bundles events together into messages for you.
 
 # Hacking
 
