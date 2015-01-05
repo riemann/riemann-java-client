@@ -21,6 +21,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.aphyr.riemann.client.IPromise;
+import com.aphyr.riemann.client.OverloadedException;
 
 import com.aphyr.riemann.Proto.Attribute;
 import com.aphyr.riemann.Proto.Event;
@@ -70,9 +71,9 @@ public class TcpClientTest {
   }
 
   @Test
-  public void backpressureTest() throws IOException {
+  public void overloadTest() throws IOException {
     // Milliseconds
-    final long delay = 2; // Server time to process a message
+    final long delay = 10;     // Server time to process a message
     final long fast = 1;                         // Async latencies
     final double slow = ((double) delay) * 0.95; // Backpressure latencies
 
@@ -81,46 +82,105 @@ public class TcpClientTest {
 
     try {
       client = RiemannClient.tcp(server.start());
-      ((TcpTransport) client.transport()).setWriteBufferLimit(1);
+      ((TcpTransport) client.transport()).setWriteBufferLimit(5);
       client.connect();
 
-      // How many backpressured writes do we need to see?
-      final long requiredSlowWrites = 500000;
-
-      // Bail out EVENTUALLY
-      final int maxWrites = 1000000;
-
-      long t0;
+      final int n = 100000;
+      final List<IPromise<Msg>> responses = new ArrayList<IPromise<Msg>>(n);
       long latency;
-      long slowWrites = 0;
-      IPromise<Msg> res = null;
+      long t0;
 
-      for (int i = 0; i < maxWrites; i++) {
+      // Queue up a bunch of writes
+      for (int i = 0; i < n; i++) {
         // Measure the time it takes to call .send()
         t0 = System.nanoTime();
-        res = client.event().service("slow").metric(i).send();
-        latency = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - t0);
+        responses.add(client.event().service("slow").metric(i).send());
+        latency = System.nanoTime() - t0;
+        assertTrue(latency <= 100000000);
+      }
 
-        System.out.println(i + " - " + latency);
-
-        if (latency < fast) {
-          // We're not in backpressure mode yet.
-//          assertTrue(0 == slowWrites);
-        } else if (latency < slow) {
-          // Probably transitioning to slow mode
-        } else {
-          // We're in slow mode
-          slowWrites++;
-          if (requiredSlowWrites <= slowWrites) {
-            // Test complete!
-            break;
+      // Deref all and spew out success/failure pairs
+      // 0: success
+      // 1: timeout
+      // 2: overload
+      // 3: other
+      final ArrayList<int[]> results = new ArrayList<int[]>();
+      int state = -1;
+      int count = 0;
+      long deadline = System.currentTimeMillis() + 1000;
+      for (IPromise<Msg> response : responses) {
+        try {
+          if (null == response.deref(deadline - System.currentTimeMillis(),
+                                     TimeUnit.MILLISECONDS)) {
+            // Timeout
+            if (state == -1) {
+              state = 1;
+            } else if (state != 1) {
+              results.add(new int[]{state, count});
+              state = 1;
+            }
+          } else {
+            // OK
+            if (state == -1) {
+              state = 0;
+            } else if (state != 0) {
+              results.add(new int[]{state, count});
+              state = 0;
+              count = 0;
+            }
+          }
+        } catch (OverloadedException e) {
+          // Not OK
+          if (state == -1) {
+            state = 2;
+          } else if (state != 2) {
+            results.add(new int[]{state, count});
+            state = 2;
+            count = 0;
+          }
+        } catch (Exception e) {
+          // Huh?
+          if (state == -1) {
+            state = 3;
+          } else if (state != 3) {
+            results.add(new int[]{state, count});
+            state = 3;
+            count = 0;
           }
         }
+        count++;
       }
 
-      if (res != null) {
-        res.deref();
+      // Print outcomes
+      //for (int[] res : results) {
+      //  if (res[0] == 0) {
+      //    System.out.println("ok\t\t" + res[1]);
+      //  } else if (res[0] == 1) {
+      //    System.out.println("timeout\t" + res[1]);
+      //  } else if (res[0] == 2) {
+      //    System.out.println("overload\t" + res[1]);
+      //  } else {
+      //    System.out.println("other\t\t" + res[1]);
+      //  }
+      //}
+
+      // OKs should come first
+      assertTrue(0 == results.get(0)[0]);
+      // Should be a lot of OKs
+      assertTrue(100 < results.get(0)[1]);
+
+      // Tally up totals
+      int[] counts = new int[4];
+      for (int[] res : results) {
+        counts[res[0]] += res[1];
       }
+
+      // Should see both overloads and timeouts
+      assertTrue(0 < counts[1]);
+      assertTrue(0 < counts[2]);
+
+      // No others
+      assertTrue(counts[3] == 0);
     } finally {
       if (client != null) {
         client.close();

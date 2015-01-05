@@ -20,9 +20,9 @@ public class EchoServer extends Server {
       } catch (InterruptedException e) {
       }
     }
-    if (0 < m.getEventsCount()) {
-      System.out.println("Server: " + m.getEvents(0).getMetricSint64());
-    }
+    //if (0 < m.getEventsCount()) {
+    //  System.out.println("Server: " + m.getEvents(0).getMetricSint64());
+    //}
     return m;
   }
 }

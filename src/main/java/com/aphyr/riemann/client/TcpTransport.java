@@ -10,6 +10,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.LockSupport;
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.*;
 import org.jboss.netty.channel.group.*;
@@ -58,11 +59,12 @@ public class TcpTransport implements AsynchronousTransport {
   public volatile Semaphore writeLimiter = new Semaphore(8192);
 
   // Configuration
+  public final AtomicInteger writeLimit     = new AtomicInteger(8192);
   public final AtomicLong    reconnectDelay = new AtomicLong(5000);
   public final AtomicInteger connectTimeout = new AtomicInteger(5000);
-  public final AtomicInteger writeTimeout   = new AtomicInteger(0);
-  public final AtomicInteger writeBufferHigh = new AtomicInteger(1);
-  public final AtomicInteger writeBufferLow  = new AtomicInteger(0);
+  public final AtomicInteger writeTimeout   = new AtomicInteger(5000);
+  public final AtomicInteger writeBufferHigh = new AtomicInteger(1024 * 64);
+  public final AtomicInteger writeBufferLow  = new AtomicInteger(1024 * 8);
   public final AtomicBoolean cacheDns = new AtomicBoolean(true);
   public final InetSocketAddress address;
   public final AtomicReference<SSLContext> sslContext =
@@ -102,6 +104,7 @@ public class TcpTransport implements AsynchronousTransport {
       throw new IllegalStateException("can't modify the write buffer limit of a connected transport; please set the limit before connecting");
     }
 
+    writeLimit.set(limit);
     writeLimiter = new Semaphore(limit);
     return this;
   }
@@ -255,13 +258,9 @@ public class TcpTransport implements AsynchronousTransport {
   //    channels.flush().sync();
   }
 
-  // Slow down requests gradually instead of slamming into the buffer limit
-  public void snooze() {
-    if limitert.
-  }
-
   // Write a message to any handler and return a promise to be fulfilled by
   // the corresponding response Msg.
+  @Override
   public IPromise<Msg> sendMessage(final Msg msg) {
     return sendMessage(msg, new Promise<Msg>());
   }
@@ -276,40 +275,32 @@ public class TcpTransport implements AsynchronousTransport {
     final Write write = new Write(msg, promise);
     final Semaphore limiter = writeLimiter;
 
-    System.out.println("Limiter" + limiter);
-
     // Reserve a slot in the queue
-    try {
-      if (limiter.tryAcquire(writeTimeout.get(), TimeUnit.MILLISECONDS)) {
-        for (Channel channel : channels) {
-          // When the write is flushed from our local buffer, release our
-          // limiter permit.
-          ChannelFuture f = channel.write(write);
-          f.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture f) {
-              System.out.println("Releasing");
-              limiter.release();
-            }
-          });
-          return promise;
-        }
-
-        // No channels
-        promise.deliver(new IOException("no channels available"));
+    if (limiter.tryAcquire()) {
+      for (Channel channel : channels) {
+        // When the write is flushed from our local buffer, release our
+        // limiter permit.
+        ChannelFuture f = channel.write(write);
+        f.addListener(new ChannelFutureListener() {
+          @Override
+          public void operationComplete(ChannelFuture f) {
+            limiter.release();
+          }
+        });
         return promise;
       }
-    } catch (InterruptedException e) {
+
+      // No channels
+      promise.deliver(new IOException("no channels available"));
+      return promise;
     }
 
-    // No time
+    // Buffer's full.
     promise.deliver(
         new OverloadedException(
-          "all client channels full (" +
-          writeLimiter.availablePermits() +
-          " writes) and no space opened up in " +
-          writeTimeout.get() +
-          " ms; not blocking any further to avoid deadlock."));
+          "client write buffer is full: " +
+          writeLimiter.availablePermits() + " / " +
+          writeLimit.get() + " messages."));
     return promise;
   }
 

@@ -20,17 +20,22 @@ public class WriteQueue {
     size = 0;
   }
 
-  public synchronized void close() {
+  // Returns the number of promises cleared.
+  public synchronized void close(Throwable t) {
     isOpen = false;
 
     // Deliver exceptions to all outstanding promises.
-    final IOException ex = new IOException("Channel closed.");
+    final IOException ex = new IOException("channel closed", t);
     Promise<Msg> promise;
     while ((promise = queue.poll()) != null) {
       promise.deliver(ex);
     }
 
     size = 0;
+  }
+
+  public int size() {
+    return this.size;
   }
 
   public synchronized void put(final Promise<Msg> p) throws InterruptedException {

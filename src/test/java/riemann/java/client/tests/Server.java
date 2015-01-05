@@ -75,6 +75,8 @@ public abstract class Server {
                 response.writeTo(out);
               }
             }
+          } catch (SocketException e) {
+            // Socket closed.
           } catch (EOFException e) {
             // Socket closed.
           } finally {

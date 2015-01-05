@@ -35,31 +35,8 @@ public class TcpHandler extends SimpleChannelHandler {
     this.exceptionReporter = exceptionReporter;
   }
 
-  // When we open, add our channel to the channel group.
-  @Override
-  public void channelOpen(ChannelHandlerContext c, ChannelStateEvent e) throws Exception {
-    super.channelOpen(c, e);
-  }
-
-  // When we connect, save the channel so we can write to it.
-  @Override
-  public void channelConnected(ChannelHandlerContext c,
-                               ChannelStateEvent e) throws Exception {
-    queue.open();
-    super.channelConnected(c, e);
-  }
-
-  @Override
-  public void channelClosed(ChannelHandlerContext c,
-                            ChannelStateEvent e) throws Exception {
-    // Mark the queue as closed.
-    queue.close();
-
-    super.channelClosed(c, e);
-  }
-
-  // We receive a Write, and pass the Write's message downstream, enqueuing the
-  // corresponding promise when the write completes.
+  // We receive a Write, and pass the Write's message downstream, enqueuing
+  // the corresponding promise when the write completes.
   public void handleDownstream(ChannelHandlerContext ctx, ChannelEvent e)
     throws Exception {
 
@@ -116,6 +93,7 @@ public class TcpHandler extends SimpleChannelHandler {
       // Oh well
     }
 
+    queue.close(e.getCause());
     e.getChannel().close();
   }
 }
