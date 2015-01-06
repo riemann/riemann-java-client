@@ -167,7 +167,7 @@ public class TcpClientTest {
       // OKs should come first
       assertTrue(0 == results.get(0)[0]);
       // Should be a lot of OKs
-      assertTrue(100 < results.get(0)[1]);
+      assertTrue(10 < results.get(0)[1]);
 
       // Tally up totals
       int[] counts = new int[4];
