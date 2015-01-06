@@ -52,6 +52,12 @@ public class Promise<T> implements IPromise<T> {
     return (T) unsafeDeref(time, unit, timeoutValue);
   }
 
+  @Override
+  public Object deref(final long millis, final Object timeoutValue)
+                     throws IOException {
+    return unsafeDeref(millis, TimeUnit.MILLISECONDS, timeoutValue);
+  }
+
   // A timed deref that allows any object for the timeout value. You and I
   // both know this will return either a T1 or just timeoutValue, but
   // unfortunately, as you probably already know, the Java type system.

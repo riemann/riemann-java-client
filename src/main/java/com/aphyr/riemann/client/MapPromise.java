@@ -58,6 +58,12 @@ public class MapPromise<T1, T2> implements IPromise<T2> {
     return (T2) unsafeDeref(time, unit, timeoutValue);
   }
 
+  @Override
+  public Object deref(final long millis, final Object timeoutValue)
+                     throws IOException {
+    return unsafeDeref(millis, TimeUnit.MILLISECONDS, timeoutValue);
+  }
+
   public Object unsafeDeref(final long time,
                             final TimeUnit unit,
                             final Object timeoutValue) throws IOException {
