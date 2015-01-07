@@ -92,7 +92,7 @@ public class MapPromise<T1, T2> implements IPromise<T2> {
           callback.call(null, e);
         }
         Object mapped = mapCapturingExceptions(value);
-        callback.call((T2) Promise.asResult(mapped), Promise.asException(value));
+        callback.call((T2) Promise.asResult(mapped), Promise.asException(mapped));
       }
     });
   }
