@@ -1,5 +1,6 @@
 package com.aphyr.riemann.client;
 
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.io.IOException;
 import clojure.lang.IDeref;
@@ -27,6 +28,10 @@ public interface IPromise<T> extends IDeref, IBlockingDeref {
   public Object unsafeDeref(final long time,
                             final TimeUnit unit,
                             final Object timeoutValue) throws IOException;
+
+
+  // Set a callback for this promise; will be invoked when the promise delivers
+  public void setCallback(Callback<T> c);
 
   // Return a new promise, based on this one, which converts values from T to
   // T2 using a function.
