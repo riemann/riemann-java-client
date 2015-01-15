@@ -14,28 +14,25 @@ import java.util.Map;
 
 public class LocalhostResolveTest {
 
-    protected Map<String, String> env = new HashMap<String, String>();
+    private static Map<String, String> env = new HashMap<String, String>();
 
-    protected static final String OS_NAME_PROP = "os.name";
-    protected static final String ExpectedWinHostname = "LocalHostResolverTestWin";
-    protected static final String ExpectedNixHostname = "LocalHostResolverTestNix";
+    private static final String OS_NAME_PROP = "os.name";
+    private static final String EXPECTED_ENV_LOCALHOST = "env_localhost";
 
     @BeforeClass
     public static void oneTimeSetUp() {
-        LocalhostResolver.RefreshIntervalMillis = 1000;
+        // clear env vars
+        env.remove(LocalhostResolver.HOSTNAME);
+        env.remove(LocalhostResolver.COMPUTERNAME);
+        setEnv(env);
+
+        LocalhostResolver.refreshIntervalMillis = 1000;
     }
 
     @Before
     public void setup() {
-        env = new HashMap<String, String>(System.getenv());
-        env.put(LocalhostResolver.HOSTNAME, ExpectedNixHostname);
-        env.put(LocalhostResolver.COMPUTERNAME, ExpectedWinHostname);
-        setEnv(env);
-
-        LocalhostResolver.CustomEnvVarName = null;
-        LocalhostResolver.resetUpdateTimes();
+        LocalhostResolver.setLastUpdateTime(0);
         Assert.assertEquals(0, LocalhostResolver.getLastUpdateTime());
-        Assert.assertEquals(0, LocalhostResolver.getLastNetUpdateTime());
     }
 
     @Test
@@ -44,65 +41,63 @@ public class LocalhostResolveTest {
         String hostname = LocalhostResolver.getResolvedHostname();
         long lastUpdateTime = LocalhostResolver.getLastUpdateTime();
         Assert.assertNotNull(hostname);
-        try {
-            Thread.sleep(1500);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+
+        // simulate time passing
+        LocalhostResolver.setLastUpdateTime(lastUpdateTime - (LocalhostResolver.refreshIntervalMillis + 500));
 
         Assert.assertNotSame(lastUpdateTime, LocalhostResolver.getLastUpdateTime());
     }
 
     @Test
+    public void testCaching() {
+        Assert.assertEquals(0, LocalhostResolver.getLastUpdateTime());
+        String hostname1 = LocalhostResolver.getResolvedHostname();
+        long updateTime1 = LocalhostResolver.getLastUpdateTime();
+        Assert.assertNotNull(hostname1);
+
+        String hostname2 = LocalhostResolver.getResolvedHostname();
+        long updateTime2 = LocalhostResolver.getLastUpdateTime();
+
+        Assert.assertEquals(hostname1, hostname2);
+        Assert.assertEquals(updateTime1, updateTime2);
+    }
+
+    @Test
     public void testNoEnvVars() throws UnknownHostException {
-        env.remove(LocalhostResolver.HOSTNAME);
-        env.remove(LocalhostResolver.COMPUTERNAME);
-        setEnv(env);
-
         String hostname = LocalhostResolver.getResolvedHostname();
+        long lastUpdateTime = LocalhostResolver.getLastUpdateTime();
         Assert.assertNotNull(hostname);
-
-        try {
-            Thread.sleep(1500);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+        Assert.assertNotSame(0, lastUpdateTime);
 
         // ensure queried hostname without env vars
-        Assert.assertEquals(LocalhostResolver.getLastUpdateTime(), LocalhostResolver.getLastNetUpdateTime());
         Assert.assertEquals(java.net.InetAddress.getLocalHost().getHostName(), hostname);
     }
 
     @Test
     public void testEnvVarWindows() {
         System.getProperties().put(OS_NAME_PROP, "Windows7");
+        env = new HashMap<String, String>(System.getenv());
+        env.put(LocalhostResolver.COMPUTERNAME, EXPECTED_ENV_LOCALHOST);
+        setEnv(env);
+        LocalhostResolver.resolveByEnv(); // force re-init
 
         String hostname = LocalhostResolver.getResolvedHostname();
-        Assert.assertEquals(ExpectedWinHostname, hostname);
-        Assert.assertEquals(0, LocalhostResolver.getLastNetUpdateTime());
+        Assert.assertEquals(EXPECTED_ENV_LOCALHOST, hostname);
+        Assert.assertEquals(0, LocalhostResolver.getLastUpdateTime());
     }
 
     @Test
     public void testEnvVarNix() {
+        env = new HashMap<String, String>(System.getenv());
+        env.put(LocalhostResolver.HOSTNAME, EXPECTED_ENV_LOCALHOST);
+        setEnv(env);
+        LocalhostResolver.resolveByEnv(); // force re-init
+
         System.getProperties().put(OS_NAME_PROP, "Linux");
         String hostname = LocalhostResolver.getResolvedHostname();
-        Assert.assertEquals(ExpectedNixHostname, hostname);
-        Assert.assertEquals(0, LocalhostResolver.getLastNetUpdateTime());
+        Assert.assertEquals(EXPECTED_ENV_LOCALHOST, hostname);
+        Assert.assertEquals(0, LocalhostResolver.getLastUpdateTime());
     }
-
-    @Test
-    public void testCustomEnvVar() {
-        final String customHostnameEnvVar = "AWS_HOST";
-        final String customHostname = "EC2-LocalHostResolverTest";
-        env.put(customHostnameEnvVar, customHostname);
-        setEnv(env);
-
-        LocalhostResolver.CustomEnvVarName = customHostnameEnvVar;
-        String hostname = LocalhostResolver.getResolvedHostname();
-        Assert.assertEquals(customHostname, hostname);
-        Assert.assertEquals(0, LocalhostResolver.getLastNetUpdateTime());
-    }
-
 
     /**
      * evil hack for testing (only!) with env var in-memory modification
@@ -137,10 +132,10 @@ public class LocalhostResolveTest {
                     }
                 }
             } catch (Exception e2) {
-                e2.printStackTrace();
+                throw new RuntimeException(e2);
             }
         } catch (Exception e1) {
-            e1.printStackTrace();
+            throw new RuntimeException(e1);
         }
     }
 }

@@ -22,21 +22,22 @@ public class LocalhostResolver {
     public static final String HOSTNAME = "HOSTNAME"; // Nix
 
     // how often should we refresh the cached hostname
-    public static long RefreshIntervalMillis = 60 * 1000;
-    // enables setting a custom env var used for resolving
-    public static String CustomEnvVarName = null;
+    public static long refreshIntervalMillis = 60 * 1000;
 
     // cached hostname result
+    private static boolean envResolved = false;
     private static String hostname;
 
     // update (refresh) time management
     private static long lastUpdate = 0;
-    private static long lastNetUpdate = 0;
     public static long getLastUpdateTime() { return lastUpdate; }
-    public static long getLastNetUpdateTime() { return lastNetUpdate; }
-    public static void resetUpdateTimes() {
-        lastUpdate = 0;
-        lastNetUpdate = 0;
+    // this is mostly for testing, plus ability to force a refresh
+    public static void setLastUpdateTime(long time) {
+        lastUpdate = time;
+    }
+
+    static {
+        resolveByEnv();
     }
 
     /**
@@ -47,7 +48,7 @@ public class LocalhostResolver {
      */
     public static String getResolvedHostname() {
         long now = System.currentTimeMillis();
-        if(now - RefreshIntervalMillis > lastUpdate) {
+        if((now - refreshIntervalMillis) > lastUpdate) {
             refreshResolve();
         }
 
@@ -59,33 +60,34 @@ public class LocalhostResolver {
      */
     public static void refreshResolve() {
         try {
-            hostname = resolveByEnv();
             if(hostname == null || hostname.isEmpty()) {
                 hostname = java.net.InetAddress.getLocalHost().getHostName();
-                lastNetUpdate = System.currentTimeMillis();
+                if (hostname == null) {
+                    hostname = "localhost";
+                }
+                lastUpdate = System.currentTimeMillis();
             }
         } catch (UnknownHostException e) {
-            //e.printStackTrace();
-        }
-        finally {
-            lastUpdate = System.currentTimeMillis();
+            // fallthrough
         }
     }
 
     /**
      * try to resolve the hostname by env vars
      *
-     * @return
      */
-    private static String resolveByEnv() {
-        if(CustomEnvVarName != null) {
-            return System.getenv(CustomEnvVarName);
-        }
-
+    public static void resolveByEnv() {
+        String var;
         if(System.getProperty("os.name").startsWith("Windows")) {
-            return System.getenv(COMPUTERNAME);
+            var =  System.getenv(COMPUTERNAME);
+            if(var == null) {
+                var  = "localhost";
+            }
+        }
+        else {
+            var = System.getenv(HOSTNAME);
         }
 
-        return System.getenv(HOSTNAME);
+        hostname = var;
     }
 }
