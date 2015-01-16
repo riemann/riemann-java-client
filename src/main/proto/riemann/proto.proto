@@ -1,6 +1,8 @@
 option java_package = "com.aphyr.riemann";
 option java_outer_classname = "Proto";
 
+// Deprecated; state was used by early versions of the protocol, but not any
+// more.
 message State {
   optional int64 time = 1;
   optional string state = 2;
