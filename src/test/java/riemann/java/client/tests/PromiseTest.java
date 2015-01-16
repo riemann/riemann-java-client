@@ -1,5 +1,6 @@
 package riemann.java.client.tests;
 
+import com.aphyr.riemann.client.Callback;
 import com.aphyr.riemann.client.Promise;
 import java.lang.Runnable;
 import java.lang.Thread;
@@ -68,5 +69,33 @@ public class PromiseTest {
       thrown = e;
     }
     assertEquals("fail", thrown.getMessage());
+  }
+
+  public void callbackTest() throws IOException {
+
+    final String[] returned = new String[] {null};
+
+    p.setCallback(new Callback<String>() {
+      public void call(String s, Exception e) {
+        returned[0] = s;
+      }
+    });
+    assertEquals(null, returned[0]);
+    p.deliver("done");
+    assertEquals("done", returned[0]);
+  }
+
+  public void callbackExceptionTest() throws IOException {
+
+    final String[] returned = new String[] {null};
+
+    p.setCallback(new Callback<String>() {
+      public void call(String s, Exception e) {
+        returned[0] = e.getMessage();
+      }
+    });
+    assertEquals(null, returned[0]);
+    p.deliver(new RuntimeException("fail"));
+    assertEquals("fail", returned[0]);
   }
 }

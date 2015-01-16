@@ -1,5 +1,6 @@
 package com.aphyr.riemann.client;
 
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
@@ -20,14 +21,37 @@ public class Promise<T> implements IPromise<T> {
     }
   }
 
+  public static Object asResult(Object value) {
+    if (value instanceof Exception) {
+      return null;
+    }
+    else {
+      return value;
+    }
+  }
+
+  public static Exception asException(Object value){
+    if (value instanceof Exception) {
+      return (Exception) value;
+    }
+    else {
+      return null;
+    }
+  }
+
   public final CountDownLatch latch = new CountDownLatch(1);
   public final AtomicReference ref = new AtomicReference(latch);
+
+  private Callback<T> callback;
 
   public Promise() { }
 
   public void deliver(Object value) {
     if (0 < latch.getCount() && ref.compareAndSet(latch, value)) {
       latch.countDown();
+      if (callback != null) {
+        callback.call((T) asResult(value), asException(value));
+      }
     }
   }
 
@@ -73,6 +97,11 @@ public class Promise<T> implements IPromise<T> {
     } catch (InterruptedException e) {
       return timeoutValue;
     }
+  }
+
+  @Override
+  public void setCallback(Callback<T> c) {
+    callback = c;
   }
 
   // Return a new promise, based on this one, which converts values from T to

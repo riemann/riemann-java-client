@@ -85,6 +85,19 @@ public class MapPromise<T1, T2> implements IPromise<T2> {
   }
 
   @Override
+  public void setCallback(final Callback<T2> callback) {
+    this.p.setCallback(new Callback<T1>() {
+      public void call(T1 value, Exception e) {
+        if (e != null) {
+          callback.call(null, e);
+        }
+        Object mapped = mapCapturingExceptions(value);
+        callback.call((T2) Promise.asResult(mapped), Promise.asException(mapped));
+      }
+    });
+  }
+
+  @Override
   public <T3> IPromise<T3> map(Fn2<T2, T3> f) {
     return new MapPromise<T2, T3>(this, f);
   }

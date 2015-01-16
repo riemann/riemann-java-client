@@ -92,6 +92,11 @@ public class ChainPromise<T> implements IPromise<T> {
   }
 
   @Override
+  public void setCallback(Callback<T> callback) {
+    throw new UnsupportedOperationException("Can't set a callback on a chained promise; set it on the underlying promise instead.");
+  }
+
+  @Override
   public <T2> IPromise<T2> map(Fn2<T, T2> f) {
     return new MapPromise<T, T2>(this, f);
   }
