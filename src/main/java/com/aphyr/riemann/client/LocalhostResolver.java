@@ -25,7 +25,7 @@ public class LocalhostResolver {
     public static long refreshIntervalMillis = 60 * 1000;
 
     // cached hostname result
-    private static boolean envResolved = false;
+    private static String envHostname;
     private static String hostname;
 
     // update (refresh) time management
@@ -60,7 +60,7 @@ public class LocalhostResolver {
      */
     public static void refreshResolve() {
         try {
-            if(hostname == null || hostname.isEmpty()) {
+            if(envHostname == null || envHostname.isEmpty()) {
                 hostname = java.net.InetAddress.getLocalHost().getHostName();
                 if (hostname == null) {
                     hostname = "localhost";
@@ -88,6 +88,7 @@ public class LocalhostResolver {
             var = System.getenv(HOSTNAME);
         }
 
-        hostname = var;
+        envHostname = var;
+        hostname = envHostname;
     }
 }
