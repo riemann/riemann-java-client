@@ -28,10 +28,10 @@ c.event().
   metric(5.3).
   tags("appliance", "cold").
   send().
-  deref(5000, TimeUnit/MILLISECONDS);
+  deref(5000, java.util.concurrent.TimeUnit.MILLISECONDS);
 
 c.query("tagged \"cold\" and metric > 0").deref(); // => List<Event>;
-c.disconnect();
+c.close();
 ```
 
 Clients will automatically attempt to reconnect every 5 seconds. Writes will
