@@ -10,6 +10,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.InOrder;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
@@ -70,18 +71,31 @@ public class RiemannReporterTest {
 
     @Test
     public void doesNotReportStringGaugeValues() throws Exception {
-        reporter.report(map("gauge", gauge("value")),
-                        this.<Counter>map(),
-                        this.<Histogram>map(),
-                        this.<Meter>map(),
-                        this.<Timer>map());
+        reportGauge("value");
+        verifyNoReporting();
+    }
 
+    @Test
+    public void doesNotReportNullGaugeValues() throws Exception {
+        reportGauge(null);
+        verifyNoReporting();
+    }
+
+    private void verifyNoReporting() throws IOException {
         final InOrder inOrder = inOrder(riemann, eventDSL, client);
         inOrder.verify(riemann).connect();
         inOrder.verify(client, never()).event();
         verifyZeroInteractions(eventDSL);
         inOrder.verify(client).flush();
         inOrder.verifyNoMoreInteractions();
+    }
+
+    private void reportGauge(Object value) {
+        reporter.report(map("gauge", gauge(value)),
+                        this.<Counter>map(),
+                        this.<Histogram>map(),
+                        this.<Meter>map(),
+                        this.<Timer>map());
     }
 
     @Test
