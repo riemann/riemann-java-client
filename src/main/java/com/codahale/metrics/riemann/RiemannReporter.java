@@ -400,8 +400,10 @@ public class RiemannReporter extends ScheduledReporter {
             reporter.name().metric((Integer) o).send();
         } else if (o instanceof Long) {
             reporter.name().metric((Long) o).send();
+        } else if (o == null) {
+            log.debug("Gauge {} has a null value", name);
         } else {
-            log.debug("Gauge was of an unknown type: {}", o.getClass().toString());
+            log.debug("Gauge {} was of an unknown type: {} ", name, o.getClass().toString());
         }
     }
 }
