@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -62,6 +63,44 @@ public class TcpClientTest {
         final Msg m = server.received.poll();
         assertEquals("hi", m.getQuery().getString());
       }
+    } finally {
+      if (client != null) {
+        client.close();
+      }
+      server.stop();
+    }
+  }
+
+
+  @Test
+  public void limiterLeakTest() throws IOException {
+    final long delay = 0;     // Server time to process a message
+    final Server server = new EchoServer(delay);
+    IRiemannClient client = null;
+
+    try {
+      client = RiemannClient.tcp(server.start());
+      TcpTransport transport = (TcpTransport) client.transport();
+      int limit = 2;
+      transport.writeLimiter = new Semaphore(limit);
+      // Simulate the case where the server gets down after the client
+      // connected and thus no channel is available
+      transport.state = TcpTransport.State.CONNECTED;
+
+      for (int i = 0; i < limit; i++) {
+        try {
+          client.event().service("foo").metric(1).send().deref();
+          fail("Should throw IOException when there is no channel available");
+        } catch (IOException e) {
+          assertEquals("no channels available", e.getMessage());
+        }
+      }
+
+      transport.state = TcpTransport.State.DISCONNECTED;
+      client.connect();
+
+      // Should not throw OverloadedException.
+      client.event().service("foo").metric(1).send().deref();
     } finally {
       if (client != null) {
         client.close();

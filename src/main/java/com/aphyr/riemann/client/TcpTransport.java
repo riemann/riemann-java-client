@@ -289,7 +289,8 @@ public class TcpTransport implements AsynchronousTransport {
         return promise;
       }
 
-      // No channels
+      // No channels available, release the slot.
+      limiter.release();
       promise.deliver(new IOException("no channels available"));
       return promise;
     }
