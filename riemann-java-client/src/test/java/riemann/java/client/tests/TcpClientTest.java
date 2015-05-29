@@ -7,6 +7,7 @@ import static org.junit.Assert.fail;
 import java.util.*;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.Semaphore;
 
 import com.aphyr.riemann.client.RiemannClient;
 import com.aphyr.riemann.client.TcpTransport;
