@@ -174,7 +174,7 @@ public class RiemannReporter extends ScheduledReporter {
         /**
          * Tags to attach to events.
          *
-         * @param tags a {@link Collection<String>}
+         * @param tags a Collection<String>
          * @return {@code this}
          */
         public Builder tags(Collection<String> tags) {
@@ -239,7 +239,7 @@ public class RiemannReporter extends ScheduledReporter {
 
     private interface EventClosure {
         public EventDSL name(String... components);
-    };
+    }
 
 
     private EventClosure newEvent(final String metricName, final long timestamp, final String metricType) {
