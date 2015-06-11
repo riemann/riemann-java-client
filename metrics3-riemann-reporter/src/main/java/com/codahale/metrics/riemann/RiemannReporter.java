@@ -174,7 +174,7 @@ public class RiemannReporter extends ScheduledReporter {
         /**
          * Tags to attach to events.
          *
-         * @param tags a Collection<String>
+         * @param tags a {@code Collection<String>}
          * @return {@code this}
          */
         public Builder tags(Collection<String> tags) {
