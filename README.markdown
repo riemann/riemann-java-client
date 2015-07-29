@@ -86,4 +86,4 @@ which automatically bundles events together into messages for you.
 
 # Hacking
 
-You'll need [protoc 2.5.0](http://code.google.com/p/protobuf/downloads/detail?name=protobuf-2.5.0.tar.bz2&can=2&q=). After that, `mvn package` should build a JAR, and `mvn install` will drop it in your local repository.
+You'll need [protobuf 2.6.1](https://github.com/google/protobuf). After that, `mvn package` should build a JAR, and `mvn install` will drop it in your local repository.
