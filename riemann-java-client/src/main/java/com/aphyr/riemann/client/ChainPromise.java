@@ -36,8 +36,8 @@ import java.io.IOException;
 public class ChainPromise<T> implements IPromise<T> {
   public final IPromise<IPromise<T>> inner = new Promise<IPromise<T>>();
 
-  public void attach(final IPromise<T> inner) {
-    inner.deliver(inner);
+  public void attach(final IPromise<T> innerValue) {
+    inner.deliver(innerValue);
   }
 
   @Override
