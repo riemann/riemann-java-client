@@ -319,6 +319,19 @@ public class RiemannReporter extends ScheduledReporter {
         }
     }
 
+    @Override
+    public void stop() {
+        try {
+            super.stop();
+        } finally {
+            try {
+                riemann.close();
+            } catch (IOException e) {
+                log.debug("Error disconnecting from Riemann", riemann, e);
+            }
+        }
+    }
+
     private void reportTimer(String name, Timer timer, long timestamp) {
         final Snapshot snapshot = timer.getSnapshot();
         final EventClosure reporter = newEvent(name, timestamp, timer.getClass().getSimpleName());
