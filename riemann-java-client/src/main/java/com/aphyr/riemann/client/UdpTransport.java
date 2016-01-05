@@ -94,7 +94,7 @@ public class UdpTransport implements SynchronousTransport {
         Executors.newCachedThreadPool());
 
     // Timer
-    timer = new HashedWheelTimer();
+    timer = HashedWheelTimerFactory.CreateDaemonHashedWheelTimer();
 
     // Create bootstrap
     bootstrap = new ConnectionlessBootstrap(channelFactory);
