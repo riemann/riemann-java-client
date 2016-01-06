@@ -45,7 +45,7 @@ about event delivery: it will, for example, discard writes when there are too
 many messages outstanding on the wire, when Riemann cannot keep up with load,
 and so on. You *should* deref sends at some point, if for no other reason than to handle backpressure.
 
-Calling `.deref()` will throw a ServerException if the server responds with an
+Calling `.deref()` will throw a ServerError if the server responds with an
 error, or other Runtime/IOExceptions for error conditions, like a channel being
 disconnected, etc.
 
