@@ -151,7 +151,7 @@ public class TcpTransport implements AsynchronousTransport {
         Executors.newCachedThreadPool());
 
     // Timer
-    timer = new HashedWheelTimer();
+    timer = HashedWheelTimerFactory.CreateDaemonHashedWheelTimer();
 
     // Create bootstrap
     bootstrap = new ClientBootstrap(channelFactory);
