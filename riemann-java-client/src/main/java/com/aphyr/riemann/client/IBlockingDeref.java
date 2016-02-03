@@ -11,7 +11,7 @@
 /* rich 3/18/11 */
 
 
-package clojure.lang;
+package com.aphyr.riemann.client;
 
 import java.lang.Exception;
 

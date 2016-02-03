@@ -2,8 +2,6 @@ package com.aphyr.riemann.client;
 
 import java.util.concurrent.TimeUnit;
 import java.io.IOException;
-import clojure.lang.IDeref;
-import clojure.lang.IBlockingDeref;
 
 public interface IPromise<T> extends IDeref, IBlockingDeref {
   // Fulfill this promise with a single value. Only the first call to
