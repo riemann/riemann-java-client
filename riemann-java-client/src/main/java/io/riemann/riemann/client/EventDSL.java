@@ -5,11 +5,18 @@ import io.riemann.riemann.Proto.Event;
 import io.riemann.riemann.Proto.Msg;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.HashMap;
 
 public class EventDSL {
+
+    private final static long refreshInterval = 60 * 1000000000L; // 60 seconds
+    private static final Object lockToken = new Object();
+
+    private static long lastUpdateTime = 0;
+    private static String hostname = null;
+
     public final IRiemannClient client;
     public final Event.Builder builder;
     public final Map<String, String> attributes = new HashMap<String, String>();
@@ -17,12 +24,8 @@ public class EventDSL {
     public EventDSL(IRiemannClient client) {
         this.client = client;
         this.builder = Event.newBuilder();
-        try {
-            this.builder.setHost(java.net.InetAddress.getLocalHost().getHostName());
-        } catch (java.net.UnknownHostException e) {
-            // If we can't get the local host, a null host is perfectly
-            // acceptable.  Caller will know soon enough. :)
-        }
+        updateHostname();
+        this.builder.setHost(hostname);
     }
 
     public EventDSL host(String host) {
@@ -172,6 +175,31 @@ public class EventDSL {
     }
 
     public IPromise<Msg> send() {
-      return client.sendEvent(build());
+        return client.sendEvent(build());
+    }
+
+    private static void updateHostname() {
+        long currentTime = System.nanoTime();
+        long timeSinceUpdate = currentTime - lastUpdateTime;
+        if (timeSinceUpdate > refreshInterval) {
+            synchronized (lockToken) {
+                timeSinceUpdate = currentTime - lastUpdateTime;
+                if (timeSinceUpdate > refreshInterval) {
+                    hostname = getHostname();
+                    lastUpdateTime = currentTime;
+                }
+            }
+        }
+    }
+
+    private static String getHostname() {
+        try {
+            //No need for this to be volatile, at worst a thread might get an old hostname
+            return java.net.InetAddress.getLocalHost().getHostName();
+        } catch (java.net.UnknownHostException e) {
+            // If we can't get the local host, a null host is perfectly
+            // acceptable.  Caller will know soon enough. :)
+        }
+        return null;
     }
 }
