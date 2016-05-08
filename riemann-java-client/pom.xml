@@ -7,7 +7,7 @@
 
     <parent>
         <artifactId>riemann-java-client-parent</artifactId>
-        <groupId>com.aphyr</groupId>
+        <groupId>io.riemann</groupId>
         <version>0.4.2</version>
     </parent>
 

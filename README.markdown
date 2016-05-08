@@ -7,10 +7,12 @@ This project encompasses:
 3. Its corresponding (auto-generated) Java classes
 
 [![Clojars
-Project](https://img.shields.io/clojars/v/com.aphyr/riemann-java-client.svg)](https://clojars.org/com.aphyr/riemann-java-client)
+Project](https://img.shields.io/clojars/v/io.riemann/riemann-java-client.svg)](https://clojars.org/io.riemann/riemann-java-client)
+
+## Artifacts
 
 Artifacts are available through
-[clojars](https://clojars.org/com.aphyr/riemann-java-client) which you can add
+[clojars](https://clojars.org/io.riemann/riemann-java-client) which you can add
 to your maven repository like so:
 
 ```xml
@@ -19,6 +21,11 @@ to your maven repository like so:
   <url>http://clojars.org/repo</url>
 </repository>
 ```
+
+**Note:**
+The namespace for the client was previously `com.aphyr` but has been
+renamed to `io.riemann` since the 0.4.2 release. You need to update your
+dependencies.
 
 ## Example
 
@@ -42,7 +49,7 @@ will fail instantaneously when no connection is available.
 
 `.send()` proceeds asynchronously and returns as soon as Netty flushes
 the write possible. `.send()` returns a
-`com.aphyr.riemann.client.IPromise` containing the response from the
+`io.riemann.riemann.client.IPromise` containing the response from the
 write (which also supports Clojure's Deref protocol). If you do not
 deref this promise, the client makes *no* guarantees about event
 delivery: it will, for example, discard writes when there are too many
