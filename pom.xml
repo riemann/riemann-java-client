@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.aphyr</groupId>
     <artifactId>riemann-java-client-parent</artifactId>
-    <version>0.4.2-SNAPSHOT</version>
+    <version>0.4.2</version>
     <modules>
         <module>riemann-java-client</module>
         <module>metrics2-riemann-reporter</module>
@@ -100,6 +100,7 @@
             <plugin>
                 <groupId>org.apache.felix</groupId>
                 <artifactId>maven-bundle-plugin</artifactId>
+                <version>3.0.1</version>
                 <extensions>true</extensions>
                 <configuration>
                     <instructions>
