@@ -1,6 +1,6 @@
 package riemann.java.client.tests;
 
-import com.aphyr.riemann.client.Promise;
+import io.riemann.riemann.client.Promise;
 import java.lang.Runnable;
 import java.lang.Thread;
 import java.util.concurrent.TimeUnit;

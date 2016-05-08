@@ -1,7 +1,7 @@
 package riemann.java.client.tests;
 
-import com.aphyr.riemann.client.ChainPromise;
-import com.aphyr.riemann.client.Promise;
+import io.riemann.riemann.client.ChainPromise;
+import io.riemann.riemann.client.Promise;
 import java.lang.Runnable;
 import java.lang.Thread;
 import org.junit.Before;

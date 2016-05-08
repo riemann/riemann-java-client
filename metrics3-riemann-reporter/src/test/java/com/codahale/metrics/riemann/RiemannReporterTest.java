@@ -1,8 +1,8 @@
 package com.codahale.metrics.riemann;
 
-import com.aphyr.riemann.client.IRiemannClient;
-import com.aphyr.riemann.client.EventDSL;
-import com.aphyr.riemann.client.Promise;
+import io.riemann.riemann.client.IRiemannClient;
+import io.riemann.riemann.client.EventDSL;
+import io.riemann.riemann.client.Promise;
 
 import com.codahale.metrics.*;
 import com.codahale.metrics.Timer;

@@ -1,7 +1,7 @@
 package riemann.java.client.tests;
 
-import com.aphyr.riemann.client.HashedWheelTimerFactory;
-import com.aphyr.riemann.client.Promise;
+import io.riemann.riemann.client.HashedWheelTimerFactory;
+import io.riemann.riemann.client.Promise;
 import org.junit.Test;
 
 import java.io.IOException;

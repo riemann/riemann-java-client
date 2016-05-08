@@ -1,5 +1,5 @@
-package riemann.java.client.tests;
 
+package riemann.java.client.tests;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -9,18 +9,18 @@ import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.Semaphore;
 
-import com.aphyr.riemann.client.RiemannClient;
-import com.aphyr.riemann.client.TcpTransport;
-import com.aphyr.riemann.client.IRiemannClient;
-import com.aphyr.riemann.client.ServerError;
+import io.riemann.riemann.client.RiemannClient;
+import io.riemann.riemann.client.TcpTransport;
+import io.riemann.riemann.client.IRiemannClient;
+import io.riemann.riemann.client.ServerError;
 import org.junit.Test;
 
-import com.aphyr.riemann.client.IPromise;
-import com.aphyr.riemann.client.OverloadedException;
+import io.riemann.riemann.client.IPromise;
+import io.riemann.riemann.client.OverloadedException;
 
-import com.aphyr.riemann.Proto.Attribute;
-import com.aphyr.riemann.Proto.Event;
-import com.aphyr.riemann.Proto.Msg;
+import io.riemann.riemann.Proto.Attribute;
+import io.riemann.riemann.Proto.Event;
+import io.riemann.riemann.Proto.Msg;
 
 public class TcpClientTest {
 	@Test

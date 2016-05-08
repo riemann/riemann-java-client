@@ -1,6 +1,6 @@
 package com.codahale.metrics.riemann;
 
-import com.aphyr.riemann.client.IRiemannClient;
+import io.riemann.riemann.client.IRiemannClient;
 
 import org.junit.Test;
 

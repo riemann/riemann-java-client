@@ -17,10 +17,10 @@
 
 package com.codahale.metrics.riemann;
 
-import com.aphyr.riemann.client.IRiemannClient;
-import com.aphyr.riemann.client.RiemannClient;
-import com.aphyr.riemann.client.RiemannBatchClient;
-import com.aphyr.riemann.client.UnsupportedJVMException;
+import io.riemann.riemann.client.IRiemannClient;
+import io.riemann.riemann.client.RiemannClient;
+import io.riemann.riemann.client.RiemannBatchClient;
+import io.riemann.riemann.client.UnsupportedJVMException;
 
 
 import java.io.Closeable;

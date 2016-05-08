@@ -1,9 +1,9 @@
 package riemann.java.client.tests;
 
-import com.aphyr.riemann.Proto;
-import com.aphyr.riemann.client.RiemannClient;
-import com.aphyr.riemann.client.ServerError;
-import com.aphyr.riemann.client.SimpleUdpTransport;
+import io.riemann.riemann.Proto;
+import io.riemann.riemann.client.RiemannClient;
+import io.riemann.riemann.client.ServerError;
+import io.riemann.riemann.client.SimpleUdpTransport;
 import org.junit.Test;
 
 import java.io.IOException;

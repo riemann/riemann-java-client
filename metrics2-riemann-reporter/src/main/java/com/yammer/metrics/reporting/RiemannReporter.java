@@ -1,8 +1,8 @@
 package com.yammer.metrics.reporting;
 
-import com.aphyr.riemann.client.EventDSL;
-import com.aphyr.riemann.client.IRiemannClient;
-import com.aphyr.riemann.client.RiemannClient;
+import io.riemann.riemann.client.EventDSL;
+import io.riemann.riemann.client.IRiemannClient;
+import io.riemann.riemann.client.RiemannClient;
 import com.yammer.metrics.Metrics;
 import com.yammer.metrics.core.*;
 import com.yammer.metrics.stats.Snapshot;
