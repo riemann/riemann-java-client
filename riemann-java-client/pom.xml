@@ -21,7 +21,8 @@
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-simple</artifactId>
             <version>1.6.4</version>
-        </dependency>
+            <scope>test</scope>
+          </dependency>
 
         <dependency>
             <groupId>org.codehaus.jsr166-mirror</groupId>
