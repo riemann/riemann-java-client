@@ -98,6 +98,22 @@ To automatically batch events, wrap any IRiemannClient in a
 RiemannBatchClient, which automatically bundles events together into
 messages for you.
 
+# Release and deployment
+
+1. Increment the version.
+
+2. Compile the client.
+
+```sh
+mvn compile -rf :riemann-java-client
+```
+
+3. Deploy the client.
+
+```sh
+mvn deploy -rf :riemann-java-client
+```
+
 # Hacking
 
 You'll need [protobuf 2.6.1](https://github.com/google/protobuf). After
