@@ -1,4 +1,4 @@
-option java_package = "com.aphyr.riemann";
+option java_package = "io.riemann.riemann";
 option java_outer_classname = "Proto";
 
 // Deprecated; state was used by early versions of the protocol, but not any

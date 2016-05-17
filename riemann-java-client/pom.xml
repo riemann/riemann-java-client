@@ -7,8 +7,8 @@
 
     <parent>
         <artifactId>riemann-java-client-parent</artifactId>
-        <groupId>com.aphyr</groupId>
-        <version>0.4.2-SNAPSHOT</version>
+        <groupId>io.riemann</groupId>
+        <version>0.4.2</version>
     </parent>
 
     <dependencies>
@@ -17,6 +17,12 @@
             <artifactId>slf4j-api</artifactId>
             <version>1.6.4</version>
         </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <version>1.6.4</version>
+            <scope>test</scope>
+          </dependency>
 
         <dependency>
             <groupId>org.codehaus.jsr166-mirror</groupId>

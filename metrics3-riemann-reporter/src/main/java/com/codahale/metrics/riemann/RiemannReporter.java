@@ -17,7 +17,7 @@
 
 package com.codahale.metrics.riemann;
 
-import com.aphyr.riemann.client.EventDSL;
+import io.riemann.riemann.client.EventDSL;
 import com.codahale.metrics.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

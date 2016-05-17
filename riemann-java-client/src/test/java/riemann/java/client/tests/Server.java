@@ -5,10 +5,10 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.net.*;
 import java.io.*;
 
-import com.aphyr.riemann.client.RiemannClient;
-import com.aphyr.riemann.Proto.Attribute;
-import com.aphyr.riemann.Proto.Event;
-import com.aphyr.riemann.Proto.Msg;
+import io.riemann.riemann.client.RiemannClient;
+import io.riemann.riemann.Proto.Attribute;
+import io.riemann.riemann.Proto.Event;
+import io.riemann.riemann.Proto.Msg;
 
 public abstract class Server {
 	public int port;

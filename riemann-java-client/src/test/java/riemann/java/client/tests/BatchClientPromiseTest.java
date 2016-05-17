@@ -8,15 +8,15 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
-import com.aphyr.riemann.client.IPromise;
-import com.aphyr.riemann.client.IRiemannClient;
-import com.aphyr.riemann.client.RiemannBatchClient;
-import com.aphyr.riemann.client.RiemannClient;
-import com.aphyr.riemann.client.ServerError;
-import com.aphyr.riemann.client.UnsupportedJVMException;
+import io.riemann.riemann.client.IPromise;
+import io.riemann.riemann.client.IRiemannClient;
+import io.riemann.riemann.client.RiemannBatchClient;
+import io.riemann.riemann.client.RiemannClient;
+import io.riemann.riemann.client.ServerError;
+import io.riemann.riemann.client.UnsupportedJVMException;
 
-import com.aphyr.riemann.Proto.Event;
-import com.aphyr.riemann.Proto.Msg;
+import io.riemann.riemann.Proto.Event;
+import io.riemann.riemann.Proto.Msg;
 
 public class BatchClientPromiseTest {
   @Test
