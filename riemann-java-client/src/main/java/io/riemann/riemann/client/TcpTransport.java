@@ -8,19 +8,23 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import io.netty.util.concurrent.GlobalEventExecutor;
+import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.*;
+import io.netty.channel.group.*;
+import io.netty.channel.socket.nio.*;
+//import io.netty.handler.codec.frame.*;
+import io.netty.handler.codec.protobuf.*;
+import io.netty.handler.codec.LengthFieldPrepender;
+import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
+import io.netty.handler.ssl.*;
 
-import org.jboss.netty.bootstrap.ClientBootstrap;
-import org.jboss.netty.channel.*;
-import org.jboss.netty.channel.group.*;
-import org.jboss.netty.channel.socket.nio.*;
-import org.jboss.netty.handler.codec.frame.*;
-import org.jboss.netty.handler.codec.protobuf.*;
-import org.jboss.netty.handler.ssl.*;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
+import io.netty.channel.nio.NioEventLoopGroup;
 
-import org.jboss.netty.util.HashedWheelTimer;
-import org.jboss.netty.util.Timer;
+import io.netty.util.HashedWheelTimer;
+import io.netty.util.Timer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,9 +52,10 @@ public class TcpTransport implements AsynchronousTransport {
 
   // STATE STATE STATE
   public volatile State state = State.DISCONNECTED;
-  public final ChannelGroup channels = new DefaultChannelGroup();
+  public final ChannelGroup channels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE); // TODO constructor parameter
   public volatile Timer timer;
-  public volatile ClientBootstrap bootstrap;
+  public volatile Bootstrap bootstrap;
+  public volatile EventLoopGroup workerGroup;
   public volatile Semaphore writeLimiter = new Semaphore(8192);
 
   // Configuration
@@ -112,7 +117,7 @@ public class TcpTransport implements AsynchronousTransport {
 
     // Is at least one channel connected?
     for (Channel ch : channels) {
-      if (ch.isConnected()) {
+      if (ch.isActive()) {
         return true;
       }
     }
@@ -131,8 +136,9 @@ public class TcpTransport implements AsynchronousTransport {
     engine.setUseClientMode(true);
 
     final SslHandler handler = new SslHandler(engine);
-    handler.setEnableRenegotiation(false);
-    handler.setIssueHandshake(true);
+    // TODO : Not exists in Netty 4 ? jdk 8 = -Djdk.tls.rejectClientInitiatedRenegotiation=true ?
+    //handler.setEnableRenegotiation(false);
+    //handler.setIssueHandshake(true);
 
     return handler;
   }
@@ -145,64 +151,59 @@ public class TcpTransport implements AsynchronousTransport {
     };
     state = State.CONNECTING;
 
-    // Set up channel factory
-    final ChannelFactory channelFactory = new NioClientSocketChannelFactory(
-        Executors.newCachedThreadPool(),
-        Executors.newCachedThreadPool());
+    // Set up worker group
+    // TODO : check parameters
+    workerGroup = new NioEventLoopGroup(1, Executors.newCachedThreadPool());
 
     // Timer
     timer = HashedWheelTimerFactory.CreateDaemonHashedWheelTimer();
-
-    // Create bootstrap
-    bootstrap = new ClientBootstrap(channelFactory);
-
-    // Set up pipeline factory.
-    bootstrap.setPipelineFactory(
-        new ChannelPipelineFactory() {
-          public ChannelPipeline getPipeline() {
-            final ChannelPipeline p = Channels.pipeline();
-
-            // Reconnections
-            p.addLast("reconnect", new ReconnectHandler(
-                bootstrap,
-                timer,
-                reconnectDelay,
-                TimeUnit.MILLISECONDS));
-
-            // TLS
-            final SslHandler sslHandler = sslHandler();
-            if (sslHandler != null) {
-              p.addLast("tls", sslHandler);
-            }
-
-            // Normal codec
-            p.addLast("frame-decoder", new LengthFieldBasedFrameDecoder(
-                Integer.MAX_VALUE, 0, 4, 0, 4));
-            p.addLast("frame-encoder", frameEncoder);
-            p.addLast("protobuf-decoder", pbDecoder);
-            p.addLast("protobuf-encoder", pbEncoder);
-            p.addLast("channelgroups", new ChannelGroupHandler(channels));
-            p.addLast("handler", new TcpHandler(exceptionReporter));
-
-            return p;
-          }});
-
-
-    Resolver resolver;
+    final Resolver resolver;
     if (cacheDns.get() == true) {
       resolver = new CachingResolver(address);
     } else {
       resolver = new Resolver(address);
     }
 
+    // Create bootstrap
+    bootstrap = new Bootstrap();
+    bootstrap.channel(NioSocketChannel.class);
+    bootstrap.group(workerGroup);
+    bootstrap.handler(new ChannelInitializer<NioSocketChannel>() {
+      @Override
+      public void initChannel(NioSocketChannel ch) throws Exception {
+        final ChannelPipeline p = ch.pipeline();
+        // Reconnections
+        p.addLast("reconnect", new ReconnectHandler(
+                bootstrap,
+                timer,
+                reconnectDelay,
+                TimeUnit.MILLISECONDS,
+                resolver));
+
+        // TLS
+        final SslHandler sslHandler = sslHandler();
+        if (sslHandler != null) {
+          p.addLast("tls", sslHandler);
+        }
+
+        // Normal codec
+        p.addLast("frame-decoder", new LengthFieldBasedFrameDecoder(
+                Integer.MAX_VALUE, 0, 4, 0, 4));
+        p.addLast("frame-encoder", frameEncoder);
+        p.addLast("protobuf-decoder", pbDecoder);
+        p.addLast("protobuf-encoder", pbEncoder);
+        p.addLast("channelgroups", new ChannelGroupHandler(channels));
+        p.addLast("handler", new TcpHandler(exceptionReporter));
+
+      }
+    });
+
     // Set bootstrap options
-    bootstrap.setOption("tcpNoDelay", true);
-    bootstrap.setOption("keepAlive", true);
-    bootstrap.setOption("connectTimeoutMillis", connectTimeout.get());
-    bootstrap.setOption("writeBufferLowWaterMark", writeBufferLow.get());
-    bootstrap.setOption("writeBufferHighWaterMark", writeBufferHigh.get());
-    bootstrap.setOption("resolver", resolver);
-    bootstrap.setOption("remoteAddress", resolver.resolve());
+    bootstrap.remoteAddress(resolver.resolve());
+    bootstrap.option(ChannelOption.TCP_NODELAY, true);
+    bootstrap.option(ChannelOption.SO_KEEPALIVE, true);
+    bootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, connectTimeout.get());
+    bootstrap.option(ChannelOption.WRITE_BUFFER_WATER_MARK, new WriteBufferWaterMark(writeBufferLow.get(), writeBufferHigh.get()));
 
     // Connect and wait for connection ready
     final ChannelFuture result = bootstrap.connect().awaitUninterruptibly();
@@ -215,7 +216,7 @@ public class TcpTransport implements AsynchronousTransport {
     // We'll throw an exception so users can pretend this call is synchronous
     // (and log errors as appropriate) but the client might succeed later.
     if (! result.isSuccess()) {
-      throw new IOException("Connection failed", result.getCause());
+      throw new IOException("Connection failed", result.cause());
     }
   }
 
@@ -232,7 +233,8 @@ public class TcpTransport implements AsynchronousTransport {
     try {
       timer.stop();
       channels.close().awaitUninterruptibly();
-      bootstrap.releaseExternalResources();
+      workerGroup.shutdownGracefully();
+
     } finally {
       timer = null;
       bootstrap = null;
@@ -248,8 +250,7 @@ public class TcpTransport implements AsynchronousTransport {
 
   @Override
   public void flush() throws IOException {
-  // TODO: in Netty 4
-  //    channels.flush().sync();
+    //channels.flush();
   }
 
   // Write a message to any handler and return a promise to be fulfilled by
@@ -274,7 +275,10 @@ public class TcpTransport implements AsynchronousTransport {
       for (Channel channel : channels) {
         // When the write is flushed from our local buffer, release our
         // limiter permit.
-        ChannelFuture f = channel.write(write);
+        TcpHandler handler = (TcpHandler) channel.pipeline().get("handler");
+
+        // send the message
+        ChannelFuture f = handler.sendMessage(write);
         f.addListener(new ChannelFutureListener() {
           @Override
           public void operationComplete(ChannelFuture f) {
