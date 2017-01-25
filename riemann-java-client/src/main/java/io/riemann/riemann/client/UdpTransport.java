@@ -17,7 +17,7 @@ import java.util.concurrent.atomic.*;
 
 public class UdpTransport implements SynchronousTransport {
   // For writes we don't care about
-  public static final Promise<Msg> blackhole = 
+  public static final Promise<Msg> blackhole =
     new Promise<Msg>();
 
   // Shared pipeline handlers
@@ -46,7 +46,8 @@ public class UdpTransport implements SynchronousTransport {
   // Changes to this value are applied only on reconnect.
   public final AtomicInteger sendBufferSize = new AtomicInteger(16384);
   public final AtomicBoolean cacheDns = new AtomicBoolean(true);
-  public final InetSocketAddress address;
+  public final InetSocketAddress remoteAddress;
+  public final InetSocketAddress localAddress;
 
   public volatile ExceptionReporter exceptionReporter = new ExceptionReporter() {
     @Override
@@ -59,16 +60,30 @@ public class UdpTransport implements SynchronousTransport {
     this.exceptionReporter = exceptionReporter;
   }
 
-  public UdpTransport(final InetSocketAddress address) {
-    this.address = address;
+  public UdpTransport(final InetSocketAddress remoteAddress) {
+    this.remoteAddress = remoteAddress;
+    this.localAddress = null;
+  }
+
+  public UdpTransport(final InetSocketAddress remoteAddress,final InetSocketAddress localAddress) {
+    this.remoteAddress = remoteAddress;
+    this.localAddress = localAddress;
   }
 
   public UdpTransport(final String host, final int port) throws IOException {
     this(new InetSocketAddress(host, port));
   }
 
-  public UdpTransport(final String host) throws IOException {
-    this(host, DEFAULT_PORT);
+  public UdpTransport(final String remoteHost, final int remotePort, final String localHost, final int localPort) throws IOException {
+    this(new InetSocketAddress(remoteHost, remotePort),new InetSocketAddress(localHost, localPort) );
+  }
+
+  public UdpTransport(final String remoteHost) throws IOException {
+    this(remoteHost, DEFAULT_PORT);
+  }
+
+  public UdpTransport(final String remoteHost, final String localHost) throws IOException {
+    this(remoteHost, DEFAULT_PORT, localHost, DEFAULT_PORT);
   }
 
   public UdpTransport(final int port) throws IOException {
@@ -113,25 +128,35 @@ public class UdpTransport implements SynchronousTransport {
             p.addLast("protobuf-encoder", pbEncoder);
             p.addLast("channelgroups", new ChannelGroupHandler(channels));
             p.addLast("discard", discardHandler);
-            
+
             return p;
           }});
 
     Resolver resolver;
+    Resolver localResolver = null;
     if (cacheDns.get() == true) {
-      resolver = new CachingResolver(address);
+        resolver = new CachingResolver(remoteAddress);
+      if(localAddress != null){
+        localResolver = new CachingResolver(localAddress);
+      }
     } else {
-      resolver = new Resolver(address);
+      resolver = new Resolver(remoteAddress);
+      if( localAddress != null){
+        localResolver = new Resolver(localAddress);
+      }
     }
 
     // Set bootstrap options
     bootstrap.setOption("resolver", resolver);
     bootstrap.setOption("remoteAddress", resolver.resolve());
+    if(localAddress != null){
+      bootstrap.setOption("localAddress", localResolver.resolve());
+    }
     bootstrap.setOption("sendBufferSize", sendBufferSize.get());
 
     // Connect
     final ChannelFuture result = bootstrap.connect().awaitUninterruptibly();
-    
+
     // Check for errors.
     if (! result.isSuccess()) {
       close(true);
