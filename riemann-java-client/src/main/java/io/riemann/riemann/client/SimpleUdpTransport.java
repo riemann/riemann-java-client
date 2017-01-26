@@ -46,7 +46,7 @@ public class SimpleUdpTransport implements SynchronousTransport {
   }
 
   public SimpleUdpTransport(final String remoteHost, final String localHost) throws IOException {
-    this(remoteHost, DEFAULT_PORT, localHost, DEFAULT_PORT);
+    this(remoteHost, DEFAULT_PORT, localHost, 0);
   }
 
   public SimpleUdpTransport(final int port) throws IOException {

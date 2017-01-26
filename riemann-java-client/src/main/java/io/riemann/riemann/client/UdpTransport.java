@@ -83,7 +83,7 @@ public class UdpTransport implements SynchronousTransport {
   }
 
   public UdpTransport(final String remoteHost, final String localHost) throws IOException {
-    this(remoteHost, DEFAULT_PORT, localHost, DEFAULT_PORT);
+    this(remoteHost, DEFAULT_PORT, localHost, 0);
   }
 
   public UdpTransport(final int port) throws IOException {

@@ -83,7 +83,7 @@ public class TcpTransport implements AsynchronousTransport {
 
   public TcpTransport(final InetSocketAddress remoteAddress, final InetSocketAddress localAddress) {
     this.remoteAddress = remoteAddress;
-    this.localAddress = remoteAddress;
+    this.localAddress = localAddress;
   }
 
   public TcpTransport(final String remoteHost, final int remotePort) throws IOException {
@@ -99,7 +99,7 @@ public class TcpTransport implements AsynchronousTransport {
   }
 
   public TcpTransport(final String remoteHost, final String localHost) throws IOException {
-    this(remoteHost, DEFAULT_PORT, localHost, DEFAULT_PORT);
+    this(remoteHost, DEFAULT_PORT, localHost, 0);
   }
 
   public TcpTransport(final int remotePort) throws IOException {
