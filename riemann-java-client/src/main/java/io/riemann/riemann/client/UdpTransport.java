@@ -5,15 +5,19 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.Executors;
 import java.net.*;
 import java.io.*;
-import org.jboss.netty.util.HashedWheelTimer;
-import org.jboss.netty.util.Timer;
-import org.jboss.netty.channel.*;
-import org.jboss.netty.channel.group.*;
-import org.jboss.netty.handler.codec.protobuf.*;
-import org.jboss.netty.bootstrap.ConnectionlessBootstrap;
+import io.netty.channel.socket.DatagramChannel;
+import io.netty.util.HashedWheelTimer;
+import io.netty.buffer.ByteBuf;
+import io.netty.util.Timer;
+import io.netty.channel.*;
+import io.netty.channel.group.*;
+import io.netty.handler.codec.protobuf.*;
+import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.nio.NioEventLoopGroup;
 import io.riemann.riemann.Proto.Msg;
-import org.jboss.netty.channel.socket.nio.*;
+import io.netty.channel.socket.nio.*;
 import java.util.concurrent.atomic.*;
+import io.netty.util.concurrent.GlobalEventExecutor;
 
 public class UdpTransport implements SynchronousTransport {
   // For writes we don't care about
@@ -37,8 +41,9 @@ public class UdpTransport implements SynchronousTransport {
   // STATE STATE STATE
   public volatile State state = State.DISCONNECTED;
   public volatile Timer timer;
-  public volatile ConnectionlessBootstrap bootstrap;
-  public final ChannelGroup channels = new DefaultChannelGroup();
+  public volatile Bootstrap bootstrap;
+  public volatile EventLoopGroup workerGroup;
+  public final ChannelGroup channels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE); // TODO constructor parameter
 
   // Configuration
   public final AtomicLong reconnectDelay = new AtomicLong(5000);
@@ -89,53 +94,52 @@ public class UdpTransport implements SynchronousTransport {
     };
     state = State.CONNECTING;
 
-    // Set up channel factory
-    final ChannelFactory channelFactory = new NioDatagramChannelFactory(
-        Executors.newCachedThreadPool());
+    // create the workergroup
+    // TODO : check parameters
+    workerGroup = new NioEventLoopGroup(1, Executors.newCachedThreadPool());
 
     // Timer
     timer = HashedWheelTimerFactory.CreateDaemonHashedWheelTimer();
-
-    // Create bootstrap
-    bootstrap = new ConnectionlessBootstrap(channelFactory);
-
-    // Set up pipeline factory.
-    bootstrap.setPipelineFactory(
-        new ChannelPipelineFactory() {
-          public ChannelPipeline getPipeline() {
-            final ChannelPipeline p = Channels.pipeline();
-
-            p.addLast("reconnect", new ReconnectHandler(
-                bootstrap,
-                timer,
-                reconnectDelay,
-                TimeUnit.MILLISECONDS));
-            p.addLast("protobuf-encoder", pbEncoder);
-            p.addLast("channelgroups", new ChannelGroupHandler(channels));
-            p.addLast("discard", discardHandler);
-            
-            return p;
-          }});
-
-    Resolver resolver;
+    final Resolver resolver;
     if (cacheDns.get() == true) {
       resolver = new CachingResolver(address);
     } else {
       resolver = new Resolver(address);
     }
 
+    // Create bootstrap
+    bootstrap = new Bootstrap();
+    bootstrap.group(workerGroup);
+    bootstrap.channel(NioDatagramChannel.class);
+    bootstrap.handler(new ChannelInitializer<DatagramChannel>() {
+      @Override
+      public void initChannel(DatagramChannel ch) throws Exception {
+        final ChannelPipeline p = ch.pipeline();
+        p.addLast("reconnect", new ReconnectHandler(
+                bootstrap,
+                timer,
+                reconnectDelay,
+                TimeUnit.MILLISECONDS,
+                resolver));
+        p.addLast("protobuf-encoder", pbEncoder);
+        p.addLast("channelgroups", new ChannelGroupHandler(channels));
+        p.addLast("discard", discardHandler);
+
+      }
+    });
+
     // Set bootstrap options
-    bootstrap.setOption("resolver", resolver);
-    bootstrap.setOption("remoteAddress", resolver.resolve());
-    bootstrap.setOption("sendBufferSize", sendBufferSize.get());
+    bootstrap.remoteAddress(resolver.resolve());
+    //bootstrap.option("resolver", resolver);
+    bootstrap.option(ChannelOption.SO_SNDBUF, sendBufferSize.get());
 
     // Connect
     final ChannelFuture result = bootstrap.connect().awaitUninterruptibly();
-    
+
     // Check for errors.
     if (! result.isSuccess()) {
       close(true);
-      throw new IOException("Connection failed", result.getCause());
+      throw new IOException("Connection failed", result.cause());
     }
 
     // Done
@@ -167,7 +171,7 @@ public class UdpTransport implements SynchronousTransport {
 
         // Stop bootstrap
         try {
-          bootstrap.releaseExternalResources();
+          workerGroup.shutdownGracefully();
         } finally {
           bootstrap = null;
           state = State.DISCONNECTED;
@@ -198,25 +202,26 @@ public class UdpTransport implements SynchronousTransport {
     return null;
   }
 
-  public class DiscardHandler extends SimpleChannelHandler {
+  public class DiscardHandler extends ChannelInboundHandlerAdapter {
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
+    public void channelRead(ChannelHandlerContext ctx, Object msg) {
+      ((ByteBuf) msg).release();
     }
 
     @Override
-    public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e) {
-      ctx.getChannel().setReadable(false);
+    public void channelActive(ChannelHandlerContext ctx) {
+      ctx.channel().config().setAutoRead(false);
     }
 
     @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
       try {
-        exceptionReporter.reportException(e.getCause());
+        exceptionReporter.reportException(cause);
       } catch (final Exception ee) {
         // Oh well
       } finally {
         try {
-          ctx.getChannel().close();
+          ctx.channel().close();
         } catch (final Exception ee) {
           exceptionReporter.reportException(ee);
         }

@@ -2,11 +2,12 @@ package io.riemann.riemann.client;
 
 import java.io.*;
 
-import org.jboss.netty.channel.*;
+import io.netty.channel.*;
 import io.riemann.riemann.Proto.Msg;
 
-public class TcpHandler extends SimpleChannelHandler {
+public class TcpHandler extends ChannelInboundHandlerAdapter {
   public final WriteQueue queue = new WriteQueue();
+  private ChannelHandlerContext ctx;
 
   // The last error used to fulfill outstanding promises.
   public volatile IOException lastError =
@@ -18,65 +19,54 @@ public class TcpHandler extends SimpleChannelHandler {
     this.exceptionReporter = exceptionReporter;
   }
 
-  // We receive a Write, and pass the Write's message downstream, enqueuing
+  // We receive a Write, Write the message, enqueuing
   // the corresponding promise when the write completes.
-  public void handleDownstream(ChannelHandlerContext ctx, ChannelEvent e)
-    throws Exception {
-
-    // Pass through anything that isn't a message event
-    if (!(e instanceof MessageEvent)) {
-      ctx.sendDownstream(e);
-      return;
-    }
-
-    // Bounce back anything that isn't a Write.
-    final MessageEvent me = (MessageEvent) e;
-    if (!(me.getMessage() instanceof Write)) {
-     ctx.sendUpstream(me);
-      return;
-    }
-
-    // Destructure the write
-    final Write write = (Write) me.getMessage();
+  public ChannelFuture sendMessage(Write write) {
     final Msg message = write.message;
     final Promise promise = write.promise;
-
+    // write the message to the channelHandlerContext
+    final ChannelFuture f = ctx.write(message);
     // When the message event is written...
-    me.getFuture().addListener(new ChannelFutureListener() {
+    f.addListener(new ChannelFutureListener() {
       // Enqueue the corresponding promise.
       public void operationComplete(ChannelFuture future) throws Exception {
         if (future.isSuccess()) {
           queue.put(promise);
-        } else if (future.getCause() != null) {
+        } else if (future.cause() != null) {
           promise.deliver(
-            new IOException("Write failed.", future.getCause()));
+                  new IOException("Write failed.", future.cause()));
         } else {
           promise.deliver(new IOException("Write failed."));
         }
       }
     });
-
-    // Send the message event downstream
-    Channels.write(ctx, me.getFuture(), message);
+    ctx.flush();
+    return f;
   }
 
   // When messages are received, deliver them to the next queued promise.
+  // Equivalent to messageReceived in netty 3
   @Override
-  public void messageReceived(ChannelHandlerContext c, MessageEvent e) {
-    Msg message = (Msg) e.getMessage();
+  public void channelRead(ChannelHandlerContext c, Object msg) {
+    Msg message = (Msg) msg;
     queue.take().deliver(message);
+  }
+
+  @Override
+  public void channelActive(ChannelHandlerContext ctx) {
+    this.ctx = ctx;
   }
 
   // Log exceptions and close.
   @Override
-  public void exceptionCaught(ChannelHandlerContext c, ExceptionEvent e) {
+  public void exceptionCaught(ChannelHandlerContext c, Throwable cause) {
     try {
-      exceptionReporter.reportException(e.getCause());
+      exceptionReporter.reportException(cause);
     } catch (final Exception ee) {
       // Oh well
     }
 
-    queue.close(e.getCause());
-    e.getChannel().close();
+    queue.close(cause);
+    c.channel().close();
   }
 }

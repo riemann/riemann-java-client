@@ -1,6 +1,6 @@
 package io.riemann.riemann.client;
 
-import org.jboss.netty.util.HashedWheelTimer;
+import io.netty.util.HashedWheelTimer;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;

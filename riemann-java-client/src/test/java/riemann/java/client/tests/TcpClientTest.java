@@ -129,6 +129,9 @@ public class TcpClientTest {
         t0 = System.nanoTime();
         responses.add(client.event().service("slow").metric(i).send());
         latency = System.nanoTime() - t0;
+        if(latency > 100000000 ) {
+          System.out.println("i : " + i + " ; " + latency);
+        }
         assertTrue(latency <= 100000000);
       }
 

@@ -40,8 +40,8 @@
 
         <dependency>
             <groupId>io.netty</groupId>
-            <artifactId>netty</artifactId>
-            <version>3.6.1.Final</version>
+            <artifactId>netty-all</artifactId>
+            <version>4.1.4.Final</version>
         </dependency>
 
     </dependencies>
