@@ -68,11 +68,13 @@ public class EventDSL {
 
     public EventDSL time(float time) {
         builder.setTime((long) time);
+        builder.setTimeMicros((long) (time * 1000000));
         return this;
     }
 
     public EventDSL time(double time) {
         builder.setTime((long) time);
+        builder.setTimeMicros((long) (time * 1000000));
         return this;
     }
     public EventDSL time(long time) {
