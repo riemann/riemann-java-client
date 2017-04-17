@@ -48,38 +48,62 @@ public class RiemannClient implements IRiemannClient {
   }
 
   // TCP constructors
-  public static RiemannClient tcp(final InetSocketAddress address) throws IOException {
-    return wrap(new TcpTransport(address));
+  public static RiemannClient tcp(final InetSocketAddress remoteAddress) throws IOException {
+    return wrap(new TcpTransport(remoteAddress));
   }
 
-  public static RiemannClient tcp(final String host, final int port) throws IOException{
-    return wrap(new TcpTransport(host, port));
+  public static RiemannClient tcp(final InetSocketAddress remoteAddress, final InetSocketAddress localAddress) throws IOException {
+    return wrap(new TcpTransport(remoteAddress,localAddress));
   }
 
-  public static RiemannClient tcp(final String host) throws IOException {
-    return wrap(new TcpTransport(host));
+  public static RiemannClient tcp(final String remoteHost, final int remotePort) throws IOException{
+    return wrap(new TcpTransport(remoteHost, remotePort));
   }
 
-  public static RiemannClient tcp(final int port) throws IOException {
-    return wrap(new TcpTransport(port));
+  public static RiemannClient tcp(final String remoteHost, final int remotePort, final String localHost, final int localPort) throws IOException{
+    return wrap(new TcpTransport(remoteHost, remotePort, localHost, localPort));
+  }
+
+  public static RiemannClient tcp(final String remoteHost) throws IOException {
+    return wrap(new TcpTransport(remoteHost));
+  }
+
+  public static RiemannClient tcp(final String remoteHost, final String localHost) throws IOException {
+    return wrap(new TcpTransport(remoteHost, localHost));
+  }
+
+  public static RiemannClient tcp(final int remotePort) throws IOException {
+    return wrap(new TcpTransport(remotePort));
   }
 
   // UDP constructors
   // STOP REPEATING YOURSELF KYLE! STOP REPEATING YOURSELF KYLE!
-  public static RiemannClient udp(final InetSocketAddress address) throws IOException {
-    return wrap(new UdpTransport(address));
+  public static RiemannClient udp(final InetSocketAddress remoteAddress) throws IOException {
+    return wrap(new UdpTransport(remoteAddress));
   }
 
-  public static RiemannClient udp(final String host, final int port) throws IOException {
-    return wrap(new UdpTransport(host, port));
+  public static RiemannClient udp(final InetSocketAddress remoteAddress, final InetSocketAddress localAddress) throws IOException {
+    return wrap(new UdpTransport(remoteAddress,localAddress));
   }
 
-  public static RiemannClient udp(final String host) throws IOException {
-    return wrap(new UdpTransport(host));
+  public static RiemannClient udp(final String remoteHost, final int remotePort) throws IOException {
+    return wrap(new UdpTransport(remoteHost, remotePort));
   }
 
-  public static RiemannClient udp(final int port) throws IOException {
-    return wrap(new UdpTransport(port));
+  public static RiemannClient udp(final String remoteHost, final int remotePort, final String localHost, final int localPort) throws IOException{
+    return wrap(new UdpTransport(remoteHost, remotePort, localHost, localPort));
+  }
+
+  public static RiemannClient udp(final String remoteHost) throws IOException {
+    return wrap(new UdpTransport(remoteHost));
+  }
+
+  public static RiemannClient udp(final String remoteHost, final String localHost) throws IOException {
+    return wrap(new UdpTransport(remoteHost, localHost));
+  }
+
+  public static RiemannClient udp(final int remotePort) throws IOException {
+    return wrap(new UdpTransport(remotePort));
   }
 
 

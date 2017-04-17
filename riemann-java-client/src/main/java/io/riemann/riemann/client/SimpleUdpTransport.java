@@ -15,22 +15,38 @@ public class SimpleUdpTransport implements SynchronousTransport {
   private volatile DatagramSocket socket;
   private volatile boolean connected = false;
 
-  private final InetSocketAddress address;
+  private final InetSocketAddress remoteAddress;
+  private final InetSocketAddress localAddress;
 
   private volatile Resolver resolver;
+  private volatile Resolver localResolver;
 
   public volatile boolean cacheDns = true;
 
-  public SimpleUdpTransport(final InetSocketAddress address) {
-    this.address = address;
+  public SimpleUdpTransport(final InetSocketAddress remoteAddress) {
+    this.remoteAddress = remoteAddress;
+    this.localAddress = null;
+  }
+
+  public SimpleUdpTransport(final InetSocketAddress remoteAddress, final InetSocketAddress localAddress) {
+    this.remoteAddress = remoteAddress;
+    this.localAddress = localAddress;
   }
 
   public SimpleUdpTransport(final String host, final int port) throws IOException {
     this(new InetSocketAddress(host, port));
   }
 
+  public SimpleUdpTransport(final String remoteHost, final int remotePort, final String localHost, final int localPort) throws IOException {
+    this(new InetSocketAddress(remoteHost, remotePort), new InetSocketAddress(localHost, localPort) );
+  }
+
   public SimpleUdpTransport(final String host) throws IOException {
     this(host, DEFAULT_PORT);
+  }
+
+  public SimpleUdpTransport(final String remoteHost, final String localHost) throws IOException {
+    this(remoteHost, DEFAULT_PORT, localHost, 0);
   }
 
   public SimpleUdpTransport(final int port) throws IOException {
@@ -54,11 +70,21 @@ public class SimpleUdpTransport implements SynchronousTransport {
   @Override
   public synchronized void connect() throws IOException {
     if (cacheDns == true) {
-      this.resolver = new CachingResolver(address);
+      this.resolver = new CachingResolver(remoteAddress);
+      if( this.localAddress != null){
+        this.localResolver = new CachingResolver(localAddress);
+      }
     } else {
-      this.resolver = new Resolver(address);
+      this.resolver = new Resolver(remoteAddress);
+      if( this.localAddress != null){
+        this.localResolver = new Resolver(localAddress);
+      }
     }
-    socket = new DatagramSocket();
+    if (this.localAddress != null){
+      socket = new DatagramSocket(localResolver.resolve());
+    }else{
+      socket = new DatagramSocket();
+    }
     connected = true;
   }
 

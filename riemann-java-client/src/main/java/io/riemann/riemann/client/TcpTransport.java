@@ -61,7 +61,8 @@ public class TcpTransport implements AsynchronousTransport {
   public final AtomicInteger writeBufferHigh = new AtomicInteger(1024 * 64);
   public final AtomicInteger writeBufferLow  = new AtomicInteger(1024 * 8);
   public final AtomicBoolean cacheDns = new AtomicBoolean(true);
-  public final InetSocketAddress address;
+  public final InetSocketAddress remoteAddress;
+  public final InetSocketAddress localAddress;
   public final AtomicReference<SSLContext> sslContext =
     new AtomicReference<SSLContext>();
 
@@ -75,20 +76,34 @@ public class TcpTransport implements AsynchronousTransport {
     this.exceptionReporter = exceptionReporter;
   }
 
-  public TcpTransport(final InetSocketAddress address) {
-    this.address = address;
+  public TcpTransport(final InetSocketAddress remoteAddress) {
+    this.remoteAddress = remoteAddress;
+    this.localAddress = null;
   }
 
-  public TcpTransport(final String host, final int port) throws IOException {
-    this(new InetSocketAddress(host, port));
+  public TcpTransport(final InetSocketAddress remoteAddress, final InetSocketAddress localAddress) {
+    this.remoteAddress = remoteAddress;
+    this.localAddress = localAddress;
   }
 
-  public TcpTransport(final String host) throws IOException {
-    this(host, DEFAULT_PORT);
+  public TcpTransport(final String remoteHost, final int remotePort) throws IOException {
+    this(new InetSocketAddress(remoteHost, remotePort));
   }
 
-  public TcpTransport(final int port) throws IOException {
-    this(InetAddress.getLocalHost().getHostAddress(), port);
+  public TcpTransport(final String remoteHost, final int remotePort, final String localHost, final int localPort) throws IOException {
+    this(new InetSocketAddress(remoteHost, remotePort),new InetSocketAddress(localHost, localPort) );
+  }
+
+  public TcpTransport(final String remoteHost) throws IOException {
+    this(remoteHost, DEFAULT_PORT);
+  }
+
+  public TcpTransport(final String remoteHost, final String localHost) throws IOException {
+    this(remoteHost, DEFAULT_PORT, localHost, 0);
+  }
+
+  public TcpTransport(final int remotePort) throws IOException {
+    this(InetAddress.getLocalHost().getHostAddress(), remotePort);
   }
 
 
@@ -189,10 +204,17 @@ public class TcpTransport implements AsynchronousTransport {
 
 
     Resolver resolver;
+    Resolver localResolver = null;
     if (cacheDns.get() == true) {
-      resolver = new CachingResolver(address);
+        resolver = new CachingResolver(remoteAddress);
+      if(localAddress != null){
+        localResolver = new CachingResolver(localAddress);
+      }
     } else {
-      resolver = new Resolver(address);
+      resolver = new Resolver(remoteAddress);
+      if( localAddress != null){
+        localResolver = new Resolver(localAddress);
+      }
     }
 
     // Set bootstrap options
@@ -203,6 +225,9 @@ public class TcpTransport implements AsynchronousTransport {
     bootstrap.setOption("writeBufferHighWaterMark", writeBufferHigh.get());
     bootstrap.setOption("resolver", resolver);
     bootstrap.setOption("remoteAddress", resolver.resolve());
+    if( localAddress != null){
+      bootstrap.setOption("localAddress", localResolver.resolve());
+    }
 
     // Connect and wait for connection ready
     final ChannelFuture result = bootstrap.connect().awaitUninterruptibly();
