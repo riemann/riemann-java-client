@@ -12,7 +12,7 @@
     </modules>
     <packaging>pom</packaging>
     <name>Riemann Java Client</name>
-    <description>Java client for http://aphyr.github.com/riemann/</description>
+    <description>Java client for http://riemann.io/</description>
     <url>/</url>
 
     <properties>
