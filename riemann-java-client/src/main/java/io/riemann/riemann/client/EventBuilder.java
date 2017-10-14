@@ -53,7 +53,8 @@ public class EventBuilder {
     }
 
     public EventBuilder time() {
-        builder.clearMetricF();
+        builder.clearTime();
+        builder.clearTimeMicros();
         return this;
     }
 
