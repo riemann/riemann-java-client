@@ -1,5 +1,5 @@
 #!/bin/sh
-set -e
+set -ex
 if [ ! -d "$HOME/protobuf/lib" ]; then
   wget https://github.com/google/protobuf/releases/download/v2.6.1/protobuf-2.6.1.tar.gz
   tar -xzvf protobuf-2.6.1.tar.gz

@@ -8,7 +8,7 @@ jdk:
 cache:
   directories:
   - $HOME/protobuf
-  - $HOME/.m2
+  - $home/.m2
 
 before_install:
   - ./scripts/install-protobuf.sh
