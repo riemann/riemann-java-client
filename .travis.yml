@@ -1,0 +1,16 @@
+sudo: false
+
+language: java
+jdk:
+  - oraclejdk8
+  - oraclejdk9
+  - openjdk7
+
+cache:
+  directories:
+  - $HOME/protobuf
+  - $home/.m2
+
+before_install:
+  - ./scripts/install-protobuf.sh
+  - export PATH=$PATH:$HOME/protobuf/bin

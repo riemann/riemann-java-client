@@ -9,6 +9,8 @@ This project encompasses:
 [![Clojars
 Project](https://img.shields.io/clojars/v/io.riemann/riemann-java-client.svg)](https://clojars.org/io.riemann/riemann-java-client)
 
+[![Build Status](https://travis-ci.org/riemann/riemann-java-client.svg?branch=master)](https://travis-ci.org/riemann/riemann-java-client)
+
 ## Artifacts
 
 Artifacts are available through
