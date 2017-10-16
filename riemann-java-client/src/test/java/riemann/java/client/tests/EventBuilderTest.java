@@ -46,18 +46,10 @@ public class EventBuilderTest {
         assertEquals("Processor usage", event.getDescription());
         List<Proto.Attribute> eventAttributes = getAttributesSortedByKey(event);
         assertEquals(4, eventAttributes.size());
-        // datacenter -> eu_west
-        assertEquals("datacenter", eventAttributes.get(0).getKey());
-        assertEquals("eu_west", eventAttributes.get(0).getValue());
-        // environment -> production
-        assertEquals("environment", eventAttributes.get(1).getKey());
-        assertEquals("production", eventAttributes.get(1).getValue());
-        // health -> good
-        assertEquals("health", eventAttributes.get(2).getKey());
-        assertEquals("good", eventAttributes.get(2).getValue());
-        // health -> good
-        assertEquals("network_zone", eventAttributes.get(3).getKey());
-        assertEquals("dmz", eventAttributes.get(3).getValue());
+        assertEqualsAttribute("datacenter", "eu_west", eventAttributes.get(0));
+        assertEqualsAttribute("environment", "production", eventAttributes.get(1));
+        assertEqualsAttribute("health", "good", eventAttributes.get(2));
+        assertEqualsAttribute("network_zone", "dmz", eventAttributes.get(3));
         assertEquals(60F, event.getTtl(), 0F);
     }
 
@@ -159,5 +151,10 @@ public class EventBuilderTest {
             }
         });
         return attributes;
+    }
+
+    private void assertEqualsAttribute(String expectedKey, String expectedValue, Proto.Attribute actual) {
+        assertEquals(expectedKey, actual.getKey());
+        assertEquals(expectedValue, actual.getValue());
     }
 }
