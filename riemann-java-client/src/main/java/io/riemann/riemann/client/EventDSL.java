@@ -11,14 +11,13 @@ import java.util.HashMap;
 
 public class EventDSL {
     public final IRiemannClient client;
-    public final Event.Builder builder;
-    public final Map<String, String> attributes = new HashMap<String, String>();
+    public final EventBuilder event;
 
     public EventDSL(IRiemannClient client) {
         this.client = client;
-        this.builder = Event.newBuilder();
+        this.event = new EventBuilder();
         try {
-            this.builder.setHost(java.net.InetAddress.getLocalHost().getHostName());
+            this.event.host(java.net.InetAddress.getLocalHost().getHostName());
         } catch (java.net.UnknownHostException e) {
             // If we can't get the local host, a null host is perfectly
             // acceptable.  Caller will know soon enough. :)
@@ -26,149 +25,118 @@ public class EventDSL {
     }
 
     public EventDSL host(String host) {
-        if (null == host) {
-            builder.clearHost();
-        } else {
-            builder.setHost(host);
-        }
+        this.event.host(host);
         return this;
     }
 
     public EventDSL service(String service) {
-        if (null == service) {
-            builder.clearService();
-        } else {
-            builder.setService(service);
-        }
+        this.event.service(service);
         return this;
     }
 
     public EventDSL state(String state) {
-        if (null == state) {
-            builder.clearState();
-        } else {
-            builder.setState(state);
-        }
+        this.event.state(state);
         return this;
     }
 
     public EventDSL description(String description) {
-        if (null == description) {
-            builder.clearDescription();
-        } else {
-            builder.setDescription(description);
-        }
+        this.event.description(description);
         return this;
     }
 
     public EventDSL time(Null n) {
-        builder.clearMetricF();
+        this.event.time();
         return this;
     }
 
     public EventDSL time(float time) {
-        builder.setTime((long) time);
-        builder.setTimeMicros((long) (time * 1000000));
+        this.event.time(time);
         return this;
     }
 
     public EventDSL time(double time) {
-        builder.setTime((long) time);
-        builder.setTimeMicros((long) (time * 1000000));
+        this.event.time(time);
         return this;
     }
     public EventDSL time(long time) {
-        builder.setTime(time);
+        this.event.time(time);
         return this;
     }
 
     public EventDSL metric(Null n) {
-        builder.clearMetricF();
-        builder.clearMetricD();
-        builder.clearMetricSint64();
+        this.event.metric();
         return this;
     }
 
     public EventDSL metric(byte metric) {
-      builder.setMetricSint64((long) metric);
-      builder.setMetricF((float) metric);
-      return this;
+        this.event.metric(metric);
+        return this;
     }
 
     public EventDSL metric(short metric) {
-      builder.setMetricSint64((long) metric);
-        builder.setMetricF((float) metric);
-      return this;
+        this.event.metric(metric);
+        return this;
     }
 
     public EventDSL metric(int metric) {
-        builder.setMetricSint64((long) metric);
-        builder.setMetricF((float) metric);
+        this.event.metric(metric);
         return this;
     }
 
     public EventDSL metric(long metric) {
-        builder.setMetricSint64(metric);
-        builder.setMetricF((float) metric);
+        this.event.metric(metric);
         return this;
     }
 
     public EventDSL metric(float metric) {
-      builder.setMetricF(metric);
-      return this;
+        this.event.metric(metric);
+        return this;
     }
 
     public EventDSL metric(double metric) {
-        builder.setMetricD(metric);
-        builder.setMetricF((float) metric);
+        this.event.metric(metric);
         return this;
     }
 
     public EventDSL tag(String tag) {
-        builder.addTags(tag);
+        this.event.tag(tag);
         return this;
     }
 
     public EventDSL tags(List<String> tags) {
-        builder.addAllTags(tags);
+        this.event.tags(tags);
         return this;
     }
 
     public EventDSL tags(String... tags) {
-        builder.addAllTags(Arrays.asList(tags));
+        this.event.tags(tags);
         return this;
     }
 
     public EventDSL ttl(Null n) {
-        builder.clearTtl();
+        this.event.ttl();
         return this;
     }
 
     public EventDSL ttl(float ttl) {
-        builder.setTtl(ttl);
+        this.event.ttl(ttl);
         return this;
     }
 
     public EventDSL attribute(String name, String value) {
-      attributes.put(name, value);
-      return this;
+        this.event.attribute(name, value);
+        return this;
     }
 
     public EventDSL attributes(Map<String, String> attributes) {
-      this.attributes.putAll(attributes);
-      return this;
+        this.event.attributes(attributes);
+        return this;
     }
 
     // Returns the compiled Protobuf event for this DSL. Merges in the custom
     // attributes map. Can only be called safely once.
     public Event build() {
-      for (Map.Entry<String, String> entry : attributes.entrySet()) {
-        Attribute.Builder attribBuilder = Attribute.newBuilder();
-        attribBuilder.setKey(entry.getKey());
-        attribBuilder.setValue(entry.getValue());
-        builder.addAttributes(attribBuilder);
-      }
-      return builder.build();
+        return this.event.build();
     }
 
     public IPromise<Msg> send() {
