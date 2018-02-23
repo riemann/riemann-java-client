@@ -8,7 +8,7 @@
     <parent>
         <artifactId>riemann-java-client-parent</artifactId>
         <groupId>io.riemann</groupId>
-        <version>0.4.5</version>
+        <version>0.4.6</version>
     </parent>
 
 

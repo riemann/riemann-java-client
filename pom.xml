@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>io.riemann</groupId>
     <artifactId>riemann-java-client-parent</artifactId>
-    <version>0.4.5</version>
+    <version>0.4.6</version>
     <modules>
         <module>riemann-java-client</module>
         <module>metrics2-riemann-reporter</module>
@@ -19,7 +19,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     </properties>
-         
+
     <licenses>
       <license>
         <name>Apache-2.0</name>
@@ -118,7 +118,7 @@
                             com.yammer.metrics.reporting;-noimport:=true
                         </Export-Package>
                         <Import-Package>
-                            com.codahale.metrics;version="[3.0,4)";resolution:="optional",
+                            io.dropwizard.metrics;version="[3.1,5)";resolution:="optional",
                             com.yammer.metrics;resolution:="optional",
                             com.yammer.metrics.core;resolution:="optional",
                             com.yammer.metrics.stats;resolution:="optional",
