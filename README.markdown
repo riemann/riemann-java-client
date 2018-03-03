@@ -113,6 +113,7 @@ mvn compile -rf :riemann-java-client
 3. Deploy the client.
 
 ```sh
+mvn deploy -tf :riemann-java-client-parent
 mvn deploy -rf :riemann-java-client
 ```
 
