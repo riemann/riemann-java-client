@@ -15,7 +15,7 @@
         <dependency>
             <groupId>io.dropwizard.metrics</groupId>
             <artifactId>metrics-core</artifactId>
-            <version>3.1.5</version>
+            <version>4.0.2</version>
         </dependency>
         <dependency>
             <groupId>${project.groupId}</groupId>

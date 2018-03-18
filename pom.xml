@@ -118,7 +118,7 @@
                             com.yammer.metrics.reporting;-noimport:=true
                         </Export-Package>
                         <Import-Package>
-                            io.dropwizard.metrics;version="[3.1,5)";resolution:="optional",
+                            io.dropwizard.metrics;version="[4.0,2)";resolution:="optional",
                             com.yammer.metrics;resolution:="optional",
                             com.yammer.metrics.core;resolution:="optional",
                             com.yammer.metrics.stats;resolution:="optional",
