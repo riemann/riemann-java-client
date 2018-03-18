@@ -129,7 +129,7 @@ public class TcpClientTest {
         t0 = System.nanoTime();
         responses.add(client.event().service("slow").metric(i).send());
         latency = System.nanoTime() - t0;
-        assertTrue(latency <= 100000000);
+        assertTrue(latency <= 200000000);
       }
 
       // Deref all and spew out success/failure pairs
@@ -200,7 +200,7 @@ public class TcpClientTest {
       // OKs should come first
       assertTrue(0 == results.get(0)[0]);
       // Should be a lot of OKs
-      assertTrue(10 < results.get(0)[1]);
+      assertTrue(5 <= results.get(0)[1]);
 
       // Tally up totals
       int[] counts = new int[4];

@@ -55,13 +55,13 @@
                         <id>generate-sources</id>
                         <phase>generate-sources</phase>
                         <configuration>
-                            <tasks>
+                            <targets>
                                 <mkdir dir="target/generated-sources"/>
                                 <exec executable="protoc">
                                     <arg value="--java_out=target/generated-sources"/>
                                     <arg value="src/main/proto/riemann/proto.proto"/>
                                 </exec>
-                            </tasks>
+                            </targets>
                         </configuration>
                         <goals>
                             <goal>run</goal>
