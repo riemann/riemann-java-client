@@ -1,5 +1,7 @@
 sudo: false
 
+dist: xenial
+
 addons:
   apt:
     packages:
