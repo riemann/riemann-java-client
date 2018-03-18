@@ -1,11 +1,16 @@
 sudo: false
 
+
 language: java
+
+jdk:
+  - oraclejdk8
+  - oraclejdk9
 
 cache:
   directories:
   - $HOME/protobuf
-  - $home/.m2
+  - $HOME/.m2
 
 before_install:
   - ./scripts/install-protobuf.sh
