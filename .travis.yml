@@ -1,5 +1,9 @@
 sudo: false
 
+addons:
+  apt:
+    packages:
+      - protobuf-compiler
 
 language: java
 
@@ -9,9 +13,5 @@ jdk:
 
 cache:
   directories:
-  - $HOME/protobuf
   - $HOME/.m2
 
-before_install:
-  - ./scripts/install-protobuf.sh
-  - export PATH=$PATH:$HOME/protobuf/bin
