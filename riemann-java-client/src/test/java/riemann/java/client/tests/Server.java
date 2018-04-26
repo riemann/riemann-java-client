@@ -17,8 +17,8 @@ public abstract class Server {
   public LinkedBlockingQueue<Msg> received = new LinkedBlockingQueue<Msg>();
 
 	public InetSocketAddress start() throws IOException {
-		this.port = 9800 + new Random().nextInt(100);
-    this.serverSocket = new ServerSocket(this.port);
+    this.serverSocket = new ServerSocket(0);
+    this.port = serverSocket.getLocalPort();
     this.serverSocket.setReceiveBufferSize(100);
 		this.thread = mainThread(this.serverSocket);
 		this.thread.start();
