@@ -10,7 +10,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.Semaphore;
 
 import io.riemann.riemann.client.RiemannClient;
-import io.riemann.riemann.client.TcpTransport;
+import io.riemann.riemann.client.netty3.TcpTransport;
 import io.riemann.riemann.client.IRiemannClient;
 import io.riemann.riemann.client.ServerError;
 import org.junit.Test;

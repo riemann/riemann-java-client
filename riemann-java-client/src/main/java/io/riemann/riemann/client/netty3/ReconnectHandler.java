@@ -1,4 +1,4 @@
-package io.riemann.riemann.client;
+package io.riemann.riemann.client.netty3;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.TimeUnit;
@@ -10,7 +10,7 @@ import org.jboss.netty.bootstrap.Bootstrap;
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.bootstrap.ConnectionlessBootstrap;
 import org.jboss.netty.handler.timeout.*;
-import io.riemann.riemann.Proto.Msg;
+import io.riemann.riemann.client.Resolver;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class ReconnectHandler extends SimpleChannelUpstreamHandler {
@@ -26,7 +26,7 @@ public class ReconnectHandler extends SimpleChannelUpstreamHandler {
     this.delay = delay;
     this.unit = unit;
   }
-  
+
   public ReconnectHandler(ConnectionlessBootstrap bootstrap, Timer timer, AtomicLong delay, TimeUnit unit) {
     this.bootstrap = bootstrap;
     this.timer = timer;

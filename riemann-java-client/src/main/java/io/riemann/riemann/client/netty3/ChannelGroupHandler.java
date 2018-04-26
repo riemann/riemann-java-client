@@ -1,4 +1,4 @@
-package io.riemann.riemann.client;
+package io.riemann.riemann.client.netty3;
 
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelStateEvent;
