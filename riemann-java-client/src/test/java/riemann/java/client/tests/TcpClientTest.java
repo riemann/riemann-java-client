@@ -185,17 +185,17 @@ public class TcpClientTest {
       }
 
       // Print outcomes
-      //for (int[] res : results) {
-      //  if (res[0] == 0) {
-      //    System.out.println("ok\t\t" + res[1]);
-      //  } else if (res[0] == 1) {
-      //    System.out.println("timeout\t" + res[1]);
-      //  } else if (res[0] == 2) {
-      //    System.out.println("overload\t" + res[1]);
-      //  } else {
-      //    System.out.println("other\t\t" + res[1]);
-      //  }
-      //}
+      for (int[] res : results) {
+        if (res[0] == 0) {
+          System.out.println("ok\t\t" + res[1]);
+        } else if (res[0] == 1) {
+          System.out.println("timeout\t" + res[1]);
+        } else if (res[0] == 2) {
+          System.out.println("overload\t" + res[1]);
+        } else {
+          System.out.println("other\t\t" + res[1]);
+        }
+      }
 
       // OKs should come first
       assertTrue(0 == results.get(0)[0]);
