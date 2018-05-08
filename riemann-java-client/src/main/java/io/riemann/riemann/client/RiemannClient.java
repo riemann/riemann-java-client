@@ -9,11 +9,23 @@ import java.util.List;
 import io.riemann.riemann.Proto.Event;
 import io.riemann.riemann.Proto.Query;
 import io.riemann.riemann.Proto.Msg;
+import io.riemann.riemann.client.netty3.TcpTransportFactory;
+import io.riemann.riemann.client.netty3.UdpTransportFactory;
 
 // The standard client.
 public class RiemannClient implements IRiemannClient {
   // Vars
   public static final MsgValidator validate = new MsgValidator();
+  private static TransportFactory<AsynchronousTransport> tcpTransportFactory = new TcpTransportFactory();
+  private static TransportFactory<SynchronousTransport> udpTransportFactory = new UdpTransportFactory();
+
+  public static void setTcpTransportFactory(TransportFactory<AsynchronousTransport> tcpTransportFactory) {
+    RiemannClient.tcpTransportFactory = tcpTransportFactory;
+  }
+
+  public static void setUdpTransportFactory(TransportFactory<SynchronousTransport> udpTransportFactory) {
+    RiemannClient.udpTransportFactory = udpTransportFactory;
+  }
 
   // Send an exception over a client.
   public static IPromise<Msg> sendException(final IRiemannClient client,
@@ -49,61 +61,61 @@ public class RiemannClient implements IRiemannClient {
 
   // TCP constructors
   public static RiemannClient tcp(final InetSocketAddress remoteAddress) throws IOException {
-    return wrap(new TcpTransport(remoteAddress));
+    return wrap(tcpTransportFactory.create(remoteAddress));
   }
 
   public static RiemannClient tcp(final InetSocketAddress remoteAddress, final InetSocketAddress localAddress) throws IOException {
-    return wrap(new TcpTransport(remoteAddress,localAddress));
+    return wrap(tcpTransportFactory.create(remoteAddress,localAddress));
   }
 
   public static RiemannClient tcp(final String remoteHost, final int remotePort) throws IOException{
-    return wrap(new TcpTransport(remoteHost, remotePort));
+    return wrap(tcpTransportFactory.create(remoteHost, remotePort));
   }
 
   public static RiemannClient tcp(final String remoteHost, final int remotePort, final String localHost, final int localPort) throws IOException{
-    return wrap(new TcpTransport(remoteHost, remotePort, localHost, localPort));
+    return wrap(tcpTransportFactory.create(remoteHost, remotePort, localHost, localPort));
   }
 
   public static RiemannClient tcp(final String remoteHost) throws IOException {
-    return wrap(new TcpTransport(remoteHost));
+    return wrap(tcpTransportFactory.create(remoteHost));
   }
 
   public static RiemannClient tcp(final String remoteHost, final String localHost) throws IOException {
-    return wrap(new TcpTransport(remoteHost, localHost));
+    return wrap(tcpTransportFactory.create(remoteHost, localHost));
   }
 
   public static RiemannClient tcp(final int remotePort) throws IOException {
-    return wrap(new TcpTransport(remotePort));
+    return wrap(tcpTransportFactory.create(remotePort));
   }
 
   // UDP constructors
   // STOP REPEATING YOURSELF KYLE! STOP REPEATING YOURSELF KYLE!
   public static RiemannClient udp(final InetSocketAddress remoteAddress) throws IOException {
-    return wrap(new UdpTransport(remoteAddress));
+    return wrap(udpTransportFactory.create(remoteAddress));
   }
 
   public static RiemannClient udp(final InetSocketAddress remoteAddress, final InetSocketAddress localAddress) throws IOException {
-    return wrap(new UdpTransport(remoteAddress,localAddress));
+    return wrap(udpTransportFactory.create(remoteAddress,localAddress));
   }
 
   public static RiemannClient udp(final String remoteHost, final int remotePort) throws IOException {
-    return wrap(new UdpTransport(remoteHost, remotePort));
+    return wrap(udpTransportFactory.create(remoteHost, remotePort));
   }
 
   public static RiemannClient udp(final String remoteHost, final int remotePort, final String localHost, final int localPort) throws IOException{
-    return wrap(new UdpTransport(remoteHost, remotePort, localHost, localPort));
+    return wrap(udpTransportFactory.create(remoteHost, remotePort, localHost, localPort));
   }
 
-  public static RiemannClient udp(final String remoteHost) throws IOException {
-    return wrap(new UdpTransport(remoteHost));
+  public static RiemannClient udp(final String remoteHost) {
+    return wrap(udpTransportFactory.create(remoteHost));
   }
 
-  public static RiemannClient udp(final String remoteHost, final String localHost) throws IOException {
-    return wrap(new UdpTransport(remoteHost, localHost));
+  public static RiemannClient udp(final String remoteHost, final String localHost) {
+    return wrap(udpTransportFactory.create(remoteHost, localHost));
   }
 
   public static RiemannClient udp(final int remotePort) throws IOException {
-    return wrap(new UdpTransport(remotePort));
+    return wrap(udpTransportFactory.create(remotePort));
   }
 
 

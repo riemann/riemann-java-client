@@ -1,7 +1,6 @@
-package riemann.java.client.tests;
+package riemann.java.client.tests.netty3;
 
-import io.riemann.riemann.client.HashedWheelTimerFactory;
-import io.riemann.riemann.client.Promise;
+import io.riemann.riemann.client.netty3.HashedWheelTimerFactory;
 import org.junit.Test;
 
 import java.io.IOException;

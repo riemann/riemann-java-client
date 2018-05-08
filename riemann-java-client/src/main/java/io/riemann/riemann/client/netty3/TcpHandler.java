@@ -1,8 +1,12 @@
-package io.riemann.riemann.client;
+package io.riemann.riemann.client.netty3;
 
 import java.io.*;
 
 import org.jboss.netty.channel.*;
+import io.riemann.riemann.client.ExceptionReporter;
+import io.riemann.riemann.client.Promise;
+import io.riemann.riemann.client.Write;
+import io.riemann.riemann.client.WriteQueue;
 import io.riemann.riemann.Proto.Msg;
 
 public class TcpHandler extends SimpleChannelHandler {
