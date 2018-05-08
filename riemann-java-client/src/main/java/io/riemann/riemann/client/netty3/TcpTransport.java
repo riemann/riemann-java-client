@@ -1,13 +1,15 @@
 package io.riemann.riemann.client.netty3;
 
-import io.riemann.riemann.client.*;
 import io.riemann.riemann.Proto.Msg;
 import java.io.*;
+import java.net.*;
 import java.net.InetSocketAddress;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import io.riemann.riemann.client.*;
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.*;
 import org.jboss.netty.channel.group.*;
@@ -22,7 +24,7 @@ import org.jboss.netty.util.Timer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class TcpTransport extends AbstractTcpTransport {
+public class TcpTransport implements AsynchronousTransport {
   // Logger
   public final Logger logger = LoggerFactory.getLogger(TcpTransport.class);
 
@@ -34,20 +36,95 @@ public class TcpTransport extends AbstractTcpTransport {
   public static final LengthFieldPrepender frameEncoder =
     new LengthFieldPrepender(4);
 
+  public static final int DEFAULT_PORT = 5555;
+
+  // I AM A STATE MUSHEEN
+  public enum State {
+    DISCONNECTED,
+     CONNECTING,
+      CONNECTED,
+      DISCONNECTING
+  }
+
+  // STATE STATE STATE
+  public volatile State state = State.DISCONNECTED;
+  public final ChannelGroup channels = new DefaultChannelGroup();
+  public volatile Timer timer;
+  public volatile ClientBootstrap bootstrap;
+  public volatile Semaphore writeLimiter = new Semaphore(8192);
+
   // Configuration
+  public final AtomicInteger writeLimit     = new AtomicInteger(8192);
+  public final AtomicLong    reconnectDelay = new AtomicLong(5000);
+  public final AtomicInteger connectTimeout = new AtomicInteger(5000);
+  public final AtomicInteger writeTimeout   = new AtomicInteger(5000);
+  public final AtomicInteger writeBufferHigh = new AtomicInteger(1024 * 64);
+  public final AtomicInteger writeBufferLow  = new AtomicInteger(1024 * 8);
+  public final AtomicBoolean cacheDns = new AtomicBoolean(true);
+  public final InetSocketAddress remoteAddress;
+  public final InetSocketAddress localAddress;
   public final AtomicReference<SSLContext> sslContext =
     new AtomicReference<SSLContext>();
 
-    public final ChannelGroup channels = new DefaultChannelGroup();
-  public volatile Timer timer;
-  public volatile ClientBootstrap bootstrap;
+  public volatile ExceptionReporter exceptionReporter = new ExceptionReporter() {
+    public void reportException(final Throwable t) {
+      // By default, don't spam the logs.
+    }
+  };
+
+  public void setExceptionReporter(final ExceptionReporter exceptionReporter) {
+    this.exceptionReporter = exceptionReporter;
+  }
+
+  public TcpTransport(final InetSocketAddress remoteAddress) {
+    this.remoteAddress = remoteAddress;
+    this.localAddress = null;
+  }
 
   public TcpTransport(final InetSocketAddress remoteAddress, final InetSocketAddress localAddress) {
-    super(remoteAddress, localAddress);
+    this.remoteAddress = remoteAddress;
+    this.localAddress = localAddress;
+  }
+
+  public TcpTransport(final String remoteHost, final int remotePort) throws IOException {
+    this(new InetSocketAddress(remoteHost, remotePort));
+  }
+
+  public TcpTransport(final String remoteHost, final int remotePort, final String localHost, final int localPort) throws IOException {
+    this(new InetSocketAddress(remoteHost, remotePort),new InetSocketAddress(localHost, localPort) );
+  }
+
+  public TcpTransport(final String remoteHost) throws IOException {
+    this(remoteHost, DEFAULT_PORT);
+  }
+
+  public TcpTransport(final String remoteHost, final String localHost) throws IOException {
+    this(remoteHost, DEFAULT_PORT, localHost, 0);
+  }
+
+  public TcpTransport(final int remotePort) throws IOException {
+    this(InetAddress.getLocalHost().getHostAddress(), remotePort);
+  }
+
+
+  // Set the number of outstanding writes allowed at any time.
+  public synchronized TcpTransport setWriteBufferLimit(final int limit) {
+    if (isConnected()) {
+      throw new IllegalStateException("can't modify the write buffer limit of a connected transport; please set the limit before connecting");
+    }
+
+    writeLimit.set(limit);
+    writeLimiter = new Semaphore(limit);
+    return this;
   }
 
   @Override
-  public boolean checkConnected() {
+  public boolean isConnected() {
+    // Are we in state connected?
+    if (state != State.CONNECTED) {
+      return false;
+    }
+
     // Is at least one channel connected?
     for (Channel ch : channels) {
       if (ch.isConnected()) {
@@ -75,7 +152,14 @@ public class TcpTransport extends AbstractTcpTransport {
     return handler;
   }
 
-  protected ConnectionResult doConnect() throws IOException {
+  @Override
+  // Does nothing if not currently disconnected.
+  public synchronized void connect() throws IOException {
+    if (state != State.DISCONNECTED) {
+      return;
+    };
+    state = State.CONNECTING;
+
     // Set up channel factory
     final ChannelFactory channelFactory = new NioClientSocketChannelFactory(
         Executors.newCachedThreadPool(),
@@ -148,11 +232,28 @@ public class TcpTransport extends AbstractTcpTransport {
     // Connect and wait for connection ready
     final ChannelFuture result = bootstrap.connect().awaitUninterruptibly();
 
-    return new ConnectionResult(result.isSuccess(), result.getCause());
+    // At this point we consider the client "connected"--even though the
+    // connection may have failed. The channel will continue to initiate
+    // reconnect attempts in the background.
+    state = State.CONNECTED;
+
+    // We'll throw an exception so users can pretend this call is synchronous
+    // (and log errors as appropriate) but the client might succeed later.
+    if (! result.isSuccess()) {
+      throw new IOException("Connection failed", result.getCause());
+    }
   }
 
   @Override
-  public void doClose() {
+  public void close() {
+    close(false);
+  }
+
+  public synchronized void close(boolean force) {
+    if (!(force || state == State.CONNECTED)) {
+      return;
+    }
+
     try {
       timer.stop();
       channels.close().awaitUninterruptibly();
@@ -165,21 +266,66 @@ public class TcpTransport extends AbstractTcpTransport {
   }
 
   @Override
-  protected boolean doSend(Write write, final Runnable completeCallback) {
-    for (Channel channel : channels) {
-      // When the write is flushed from our local buffer, release our
-      // limiter permit.
-      ChannelFuture f = channel.write(write);
-      f.addListener(new ChannelFutureListener() {
-        @Override
-        public void operationComplete(ChannelFuture f) {
-          completeCallback.run();
-        }
-      });
-      return true;
-    }
-
-    return false;
+  public synchronized void reconnect() throws IOException {
+    close();
+    connect();
   }
 
+  @Override
+  public void flush() throws IOException {
+  // TODO: in Netty 4
+  //    channels.flush().sync();
+  }
+
+  // Write a message to any handler and return a promise to be fulfilled by
+  // the corresponding response Msg.
+  @Override
+  public IPromise<Msg> sendMessage(final Msg msg) {
+    return sendMessage(msg, new Promise<Msg>());
+  }
+
+  // Write a message to any available handler, fulfilling a specific promise.
+  public Promise<Msg> sendMessage(final Msg msg, final Promise<Msg> promise) {
+    if (state != State.CONNECTED) {
+      promise.deliver(new IOException("client not connected"));
+      return promise;
+    }
+
+    final Write write = new Write(msg, promise);
+    final Semaphore limiter = writeLimiter;
+
+    // Reserve a slot in the queue
+    if (limiter.tryAcquire()) {
+      for (Channel channel : channels) {
+        // When the write is flushed from our local buffer, release our
+        // limiter permit.
+        ChannelFuture f = channel.write(write);
+        f.addListener(new ChannelFutureListener() {
+          @Override
+          public void operationComplete(ChannelFuture f) {
+            limiter.release();
+          }
+        });
+        return promise;
+      }
+
+      // No channels available, release the slot.
+      limiter.release();
+      promise.deliver(new IOException("no channels available"));
+      return promise;
+    }
+
+    // Buffer's full.
+    promise.deliver(
+        new OverloadedException(
+          "client write buffer is full: " +
+          writeLimiter.availablePermits() + " / " +
+          writeLimit.get() + " messages."));
+    return promise;
+  }
+
+  @Override
+  public Transport transport() {
+    return null;
+  }
 }
