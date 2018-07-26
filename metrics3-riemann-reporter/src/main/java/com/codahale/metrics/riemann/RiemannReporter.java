@@ -1,42 +1,48 @@
 /*
- * Copyright 2014 Dominic LoBue
- * Copyright 2014 Brandon Seibel
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
+ * Copyright 2014 Dominic LoBue Copyright 2014 Brandon Seibel Licensed under the
+ * Apache License, Version 2.0 (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0 Unless required by applicable law
+ * or agreed to in writing, software distributed under the License is
+ * distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the specific language
+ * governing permissions and limitations under the License.
  */
 
 package com.codahale.metrics.riemann;
 
-import io.riemann.riemann.client.EventDSL;
-import com.codahale.metrics.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.SortedMap;
 import java.util.concurrent.TimeUnit;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.codahale.metrics.Clock;
+import com.codahale.metrics.Counter;
+import com.codahale.metrics.Gauge;
+import com.codahale.metrics.Histogram;
+import com.codahale.metrics.Meter;
+import com.codahale.metrics.Metered;
+import com.codahale.metrics.MetricFilter;
+import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.ScheduledReporter;
+import com.codahale.metrics.Snapshot;
+import com.codahale.metrics.Timer;
+
+import io.riemann.riemann.client.EventDSL;
 
 /**
  * A reporter that submits events to Riemann
  */
-public class RiemannReporter extends ScheduledReporter {
+public class RiemannReporter
+    extends ScheduledReporter {
 
     /**
      * Returns a new {@link Builder} for {@link RiemannReporter}.
@@ -49,22 +55,33 @@ public class RiemannReporter extends ScheduledReporter {
     }
 
     /**
-     * A builder for {@link RiemannReporter} instances. Defaults to not using a prefix, using the
-     * default clock, converting rates to events/second, converting durations to milliseconds, and
-     * not filtering metrics.
+     * A builder for {@link RiemannReporter} instances. Defaults to not using a
+     * prefix, using the default clock, converting rates to events/second,
+     * converting durations to milliseconds, and not filtering metrics.
      */
     public static class Builder {
+
         private final MetricRegistry registry;
+
         private Clock clock;
+
         private TimeUnit rateUnit;
+
         private TimeUnit durationUnit;
+
         private MetricFilter filter;
+
         private Float ttl;
+
         private String prefix;
+
         private String separator;
+
         private String localHost;
+
         private final List<String> tags;
 
+        private ValueFilterMap stateFilterMap = new ValueFilterMap();
 
         private Builder(MetricRegistry registry) {
             this.registry = registry;
@@ -149,6 +166,11 @@ public class RiemannReporter extends ScheduledReporter {
             return this;
         }
 
+        public Builder withStateFilterMap(ValueFilterMap stateFilterMap) {
+            this.stateFilterMap = stateFilterMap;
+            return this;
+        }
+
         /**
          * Separator between metric name components
          *
@@ -183,50 +205,45 @@ public class RiemannReporter extends ScheduledReporter {
             return this;
         }
 
-
         /**
-         * Builds a {@link RiemannReporter} with the given properties, sending metrics using the
-         * given {@link Riemann} client.
+         * Builds a {@link RiemannReporter} with the given properties, sending
+         * metrics using the given {@link Riemann} client.
          *
          * @param riemann a {@link Riemann} client.
          * @return a {@link RiemannReporter}
          */
         public RiemannReporter build(Riemann riemann) {
-            return new RiemannReporter(registry,
-                    riemann,
-                    clock,
-                    rateUnit,
-                    durationUnit,
-                    ttl,
-                    prefix,
-                    separator,
-                    localHost,
-                    tags,
-                    filter);
+            return new RiemannReporter(registry, riemann, clock, rateUnit,
+                                       durationUnit, ttl, prefix, separator,
+                                       localHost, tags, filter, stateFilterMap);
         }
     }
 
-    private static final Logger log = LoggerFactory.getLogger(RiemannReporter.class);
+    private static final Logger log = LoggerFactory
+        .getLogger(RiemannReporter.class);
 
     private final Riemann riemann;
+
     private final Clock clock;
+
     private final String prefix;
+
     private final String separator;
+
     private final String localHost;
+
     private final List<String> tags;
+
     private final Float ttl;
 
-    private RiemannReporter(MetricRegistry registry,
-                            Riemann riemann,
-                            Clock clock,
-                            TimeUnit rateUnit,
-                            TimeUnit durationUnit,
-                            Float ttl,
-                            String prefix,
-                            String separator,
-                            String localHost,
-                            List<String> tags,
-                            MetricFilter filter) {
+    private final ValueFilterMap stateFilterMap;
+
+    private RiemannReporter(MetricRegistry registry, Riemann riemann,
+                            Clock clock, TimeUnit rateUnit,
+                            TimeUnit durationUnit, Float ttl, String prefix,
+                            String separator, String localHost,
+                            List<String> tags, MetricFilter filter,
+                            ValueFilterMap stateFilterMap) {
         super(registry, "riemann-reporter", filter, rateUnit, durationUnit);
         this.riemann = riemann;
         this.clock = clock;
@@ -235,17 +252,20 @@ public class RiemannReporter extends ScheduledReporter {
         this.localHost = localHost;
         this.tags = tags;
         this.ttl = ttl;
+        this.stateFilterMap = stateFilterMap;
     }
 
     private interface EventClosure {
+
         public EventDSL name(String... components);
     }
 
-
-    private EventClosure newEvent(final String metricName, final long timestamp, final String metricType) {
+    private EventClosure newEvent(final String metricName, final long timestamp,
+                                  final String metricType) {
         final String prefix = this.prefix;
         final String separator = this.separator;
         return new EventClosure() {
+
             public EventDSL name(String... components) {
                 EventDSL event = riemann.client.event();
                 if (localHost != null) {
@@ -277,7 +297,6 @@ public class RiemannReporter extends ScheduledReporter {
         };
     }
 
-
     @Override
     public void report(SortedMap<String, Gauge> gauges,
                        SortedMap<String, Counter> counters,
@@ -286,7 +305,8 @@ public class RiemannReporter extends ScheduledReporter {
                        SortedMap<String, Timer> timers) {
         final long timestamp = clock.getTime() / 1000;
 
-        log.debug("Reporting metrics: for {} at {}", timestamp, System.currentTimeMillis());
+        log.debug("Reporting metrics: for {} at {}", timestamp,
+                  System.currentTimeMillis());
         // oh it'd be lovely to use Java 7 here
         try {
             riemann.connect();
@@ -334,71 +354,94 @@ public class RiemannReporter extends ScheduledReporter {
 
     private void reportTimer(String name, Timer timer, long timestamp) {
         final Snapshot snapshot = timer.getSnapshot();
-        final EventClosure reporter = newEvent(name, timestamp, timer.getClass().getSimpleName());
+        final EventClosure reporter = newEvent(name, timestamp, timer.getClass()
+            .getSimpleName());
 
-        reporter.name("max")
-            .metric(convertDuration(snapshot.getMax())).send();
-        reporter.name("mean")
-            .metric(convertDuration(snapshot.getMean())).send();
-        reporter.name("min")
-            .metric(convertDuration(snapshot.getMin())).send();
-        reporter.name("stddev")
-            .metric(convertDuration(snapshot.getStdDev())).send();
-        reporter.name("p50")
-            .metric(convertDuration(snapshot.getMedian())).send();
+        reporter.name("max").metric(convertDuration(snapshot.getMax()))
+            .state(stateFilterMap.state(timer, "max")).send();
+        reporter.name("mean").metric(convertDuration(snapshot.getMean()))
+            .state(stateFilterMap.state(timer, "mean")).send();
+        reporter.name("min").metric(convertDuration(snapshot.getMin()))
+            .state(stateFilterMap.state(timer, "min")).send();
+        reporter.name("stddev").metric(convertDuration(snapshot.getStdDev()))
+            .state(stateFilterMap.state(timer, "stddev")).send();
+        reporter.name("p50").metric(convertDuration(snapshot.getMedian()))
+            .state(stateFilterMap.state(timer, "p50")).send();
         reporter.name("p75")
-            .metric(convertDuration(snapshot.get75thPercentile())).send();
+            .metric(convertDuration(snapshot.get75thPercentile()))
+            .state(stateFilterMap.state(timer, "p75")).send();
         reporter.name("p95")
-            .metric(convertDuration(snapshot.get95thPercentile())).send();
+            .metric(convertDuration(snapshot.get95thPercentile()))
+            .state(stateFilterMap.state(timer, "p95")).send();
         reporter.name("p98")
-            .metric(convertDuration(snapshot.get98thPercentile())).send();
+            .metric(convertDuration(snapshot.get98thPercentile()))
+            .state(stateFilterMap.state(timer, "p98")).send();
         reporter.name("p99")
-            .metric(convertDuration(snapshot.get99thPercentile())).send();
+            .metric(convertDuration(snapshot.get99thPercentile()))
+            .state(stateFilterMap.state(timer, "p99")).send();
         reporter.name("p999")
-            .metric(convertDuration(snapshot.get999thPercentile())).send();
+            .metric(convertDuration(snapshot.get999thPercentile()))
+            .state(stateFilterMap.state(timer, "p999")).send();
 
         reportMetered(name, timer, timestamp);
     }
 
     private void reportMetered(String name, Metered meter, long timestamp) {
-        final EventClosure reporter = newEvent(name, timestamp, meter.getClass().getSimpleName());
-
-        reporter.name("count")
-            .metric(meter.getCount()).send();
-        reporter.name("m1_rate")
-            .metric(convertRate(meter.getOneMinuteRate())).send();
-        reporter.name("m5_rate")
-            .metric(convertRate(meter.getFiveMinuteRate())).send();
+        final EventClosure reporter = newEvent(name, timestamp, meter.getClass()
+            .getSimpleName());
+        reporter.name("count").metric(meter.getCount())
+            .state(stateFilterMap.state(meter, "count")).send();
+        reporter.name("m1_rate").metric(convertRate(meter.getOneMinuteRate()))
+            .state(stateFilterMap.state(meter, "m1_rate")).send();
+        reporter.name("m5_rate").metric(convertRate(meter.getFiveMinuteRate()))
+            .state(stateFilterMap.state(meter, "m5_rate")).send();
         reporter.name("m15_rate")
-            .metric(convertRate(meter.getFifteenMinuteRate())).send();
-        reporter.name("mean_rate")
-            .metric(convertRate(meter.getMeanRate())).send();
+            .metric(convertRate(meter.getFifteenMinuteRate()))
+            .state(stateFilterMap.state(meter, "m15_rate")).send();
+        reporter.name("mean_rate").metric(convertRate(meter.getMeanRate()))
+            .state(stateFilterMap.state(meter, "mean_rate")).send();
     }
 
-    private void reportHistogram(String name, Histogram histogram, long timestamp) {
+    private void reportHistogram(String name, Histogram histogram,
+                                 long timestamp) {
         final Snapshot snapshot = histogram.getSnapshot();
-        final EventClosure reporter = newEvent(name, timestamp, histogram.getClass().getSimpleName());
+        final EventClosure reporter = newEvent(name, timestamp, histogram
+            .getClass().getSimpleName());
 
-        reporter.name("count").metric(histogram.getCount()).send();
-        reporter.name("max").metric(snapshot.getMax()).send();
-        reporter.name("mean").metric(snapshot.getMean()).send();
-        reporter.name("min").metric(snapshot.getMin()).send();
-        reporter.name("stddev").metric(snapshot.getStdDev()).send();
-        reporter.name("p50").metric(snapshot.getMedian()).send();
-        reporter.name("p75").metric(snapshot.get75thPercentile()).send();
-        reporter.name("p95").metric(snapshot.get95thPercentile()).send();
-        reporter.name("p98").metric(snapshot.get98thPercentile()).send();
-        reporter.name("p99").metric(snapshot.get99thPercentile()).send();
-        reporter.name("p999").metric(snapshot.get999thPercentile()).send();
+        reporter.name("count").metric(histogram.getCount())
+            .state(stateFilterMap.state(histogram, "count")).send();
+        reporter.name("max").metric(snapshot.getMax())
+            .state(stateFilterMap.state(histogram, "max")).send();
+        reporter.name("mean").metric(snapshot.getMean())
+            .state(stateFilterMap.state(histogram, "mean")).send();
+        reporter.name("min").metric(snapshot.getMin())
+            .state(stateFilterMap.state(histogram, "min")).send();
+        reporter.name("stddev").metric(snapshot.getStdDev())
+            .state(stateFilterMap.state(histogram, "stddev")).send();
+        reporter.name("p50").metric(snapshot.getMedian())
+            .state(stateFilterMap.state(histogram, "p50")).send();
+        reporter.name("p75").metric(snapshot.get75thPercentile())
+            .state(stateFilterMap.state(histogram, "p75")).send();
+        reporter.name("p95").metric(snapshot.get95thPercentile())
+            .state(stateFilterMap.state(histogram, "max")).send();
+        reporter.name("p98").metric(snapshot.get98thPercentile())
+            .state(stateFilterMap.state(histogram, "p95")).send();
+        reporter.name("p99").metric(snapshot.get99thPercentile())
+            .state(stateFilterMap.state(histogram, "p99")).send();
+        reporter.name("p999").metric(snapshot.get999thPercentile())
+            .state(stateFilterMap.state(histogram, "p999")).send();
     }
 
     private void reportCounter(String name, Counter counter, long timestamp) {
-        final EventClosure reporter = newEvent(name, timestamp, counter.getClass().getSimpleName());
-        reporter.name("count").metric(counter.getCount()).send();
+        final EventClosure reporter = newEvent(name, timestamp, counter
+            .getClass().getSimpleName());
+        reporter.name("count").metric(counter.getCount())
+            .state(stateFilterMap.state(counter)).send();
     }
 
     private void reportGauge(String name, Gauge gauge, long timestamp) {
-        final EventClosure reporter = newEvent(name, timestamp, gauge.getClass().getSimpleName());
+        final EventClosure reporter = newEvent(name, timestamp, gauge.getClass()
+            .getSimpleName());
         Object o = gauge.getValue();
 
         if (o instanceof Float) {
@@ -416,7 +459,8 @@ public class RiemannReporter extends ScheduledReporter {
         } else if (o == null) {
             log.debug("Gauge {} has a null value", name);
         } else {
-            log.debug("Gauge {} was of an unknown type: {} ", name, o.getClass().toString());
+            log.debug("Gauge {} was of an unknown type: {} ", name,
+                      o.getClass().toString());
         }
     }
 }
