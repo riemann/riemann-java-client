@@ -68,21 +68,21 @@ public class RiemannReporterTest {
 
     private final MetricRegistry registry = mock(MetricRegistry.class);
 
-    private final ValueFilterMap stateFilterMap = new ValueFilterMap();
+    private final ValueFilterMap valueFilterMap = new ValueFilterMap();
 
     private final RiemannReporter reporter = RiemannReporter
         .forRegistry(registry).withClock(clock).prefixedWith("prefix")
         .convertRatesTo(TimeUnit.SECONDS)
         .convertDurationsTo(TimeUnit.MILLISECONDS).filter(MetricFilter.ALL)
         .useSeparator("|").localHost(localHost).withTtl(ttl).tags(tags)
-        .withStateFilterMap(stateFilterMap).build(riemann);
+        .withValueFilterMap(valueFilterMap).build(riemann);
 
     @Before
     public void setUp()
         throws Exception {
         when(clock.getTime()).thenReturn(timestamp * 1000);
         when(client.event()).thenReturn(eventDSL);
-        stateFilterMap.clear();
+        valueFilterMap.clear();
     }
 
     @Test
@@ -217,7 +217,7 @@ public class RiemannReporterTest {
         throws Exception {
         final Counter counter = mock(Counter.class);
         // Warn on over 50, critical over 150
-        stateFilterMap
+        valueFilterMap
             .add(counter, "count",
                  new ValueFilter.Builder("warn").withLower(50).build())
             .add(counter, "count",
@@ -308,7 +308,7 @@ public class RiemannReporterTest {
     public void reportsTimers()
         throws Exception {
         final Timer timer = mock(Timer.class);
-        stateFilterMap
+        valueFilterMap
             .add(timer, ValueFilterMap.MAX,
                  new ValueFilter.Builder("critical").withLower(50).build())
             .add(timer, ValueFilterMap.MEAN, new ValueFilter.Builder("warn")

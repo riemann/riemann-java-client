@@ -14,9 +14,30 @@ import com.codahale.metrics.Metric;
 import com.codahale.metrics.Snapshot;
 import com.codahale.metrics.Timer;
 
+/**
+ * Enables {@link ValueFilter}s to be associated with measures reported by
+ * Metrics so that state can be computed based on values at report-generation
+ * time. The {@link #add(Metric, String, ValueFilter)} method associates a
+ * {@code ValueFilter} with a measure and the {@code state} methods compute what
+ * state should be reported based on the value of a measure.
+ * <p>
+ * For example, {@code
+ *   ValueFilterMap valueFilterMap = new ValueFilterMap();
+ *   valueFilterMap
+            .add(timer, ValueFilterMap.MAX,
+                 new ValueFilter.Builder("critical").withLower(50).build())
+            .add(timer, ValueFilterMap.MEAN, new ValueFilter.Builder("warn")
+                .withUpperExclusive(200).withLower(100).build());
+ * } Attaches filters to the mean and max values reported by timers so that
+ * {@code get(timer, "max")} will return "critical" if the max value reported by
+ * the timer is greater than 50 and {@code get(timer, "mean")} will return
+ * "warn" if the mean value is between 100 (inclusive) and 200 (exclusive).
+ * Filters are applied in the order they are added and the last one that applies
+ * wins. If no filter applies, state methods return "ok".
+ */
 public class ValueFilterMap {
 
-    // Message constants
+    // Names for values reported by metrics - call these "measures"
     public static final String MAX = "max";
 
     public static final String MEAN = "mean";
@@ -173,8 +194,13 @@ public class ValueFilterMap {
     /**
      * If m is a Metric, then filterMapMap.get(m) is a map with keys equal to
      * measures (constants above) and values equal to ValueFilter instances.
-     * ValueFilters mapped to measures are applied in determining the state
-     * associated with the given measure reported to Riemann in m's report.
+     * ValueFilters mapped to measures are applied to determine the state
+     * associated with the given measure reported to Riemann in m's report. For
+     * example, if t is a timer, filterMapMap(t) is a map of lists of filters.
+     * The keys to that map are "max", "mean", "min", etc. - all of the measures
+     * that t has getters for. The associated value is a list of filters. The
+     * last filter that applies determines what the reported state is for the
+     * measure.
      */
     private final Map<Metric, Map<String, List<ValueFilter>>> filterMapMap = new ConcurrentHashMap<Metric, Map<String, List<ValueFilter>>>();
 

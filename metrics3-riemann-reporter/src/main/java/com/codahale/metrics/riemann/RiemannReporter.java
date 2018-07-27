@@ -42,7 +42,8 @@ import io.riemann.riemann.client.EventDSL;
  * A reporter that submits events to Riemann
  */
 public class RiemannReporter
-    extends ScheduledReporter {
+    extends
+    ScheduledReporter {
 
     /**
      * Returns a new {@link Builder} for {@link RiemannReporter}.
@@ -81,7 +82,7 @@ public class RiemannReporter
 
         private final List<String> tags;
 
-        private ValueFilterMap stateFilterMap = new ValueFilterMap();
+        private ValueFilterMap valueFilterMap = new ValueFilterMap();
 
         private Builder(MetricRegistry registry) {
             this.registry = registry;
@@ -166,8 +167,8 @@ public class RiemannReporter
             return this;
         }
 
-        public Builder withStateFilterMap(ValueFilterMap stateFilterMap) {
-            this.stateFilterMap = stateFilterMap;
+        public Builder withValueFilterMap(ValueFilterMap valueFilterMap) {
+            this.valueFilterMap = valueFilterMap;
             return this;
         }
 
@@ -215,7 +216,7 @@ public class RiemannReporter
         public RiemannReporter build(Riemann riemann) {
             return new RiemannReporter(registry, riemann, clock, rateUnit,
                                        durationUnit, ttl, prefix, separator,
-                                       localHost, tags, filter, stateFilterMap);
+                                       localHost, tags, filter, valueFilterMap);
         }
     }
 
@@ -236,14 +237,14 @@ public class RiemannReporter
 
     private final Float ttl;
 
-    private final ValueFilterMap stateFilterMap;
+    private final ValueFilterMap valueFilterMap;
 
     private RiemannReporter(MetricRegistry registry, Riemann riemann,
                             Clock clock, TimeUnit rateUnit,
                             TimeUnit durationUnit, Float ttl, String prefix,
                             String separator, String localHost,
                             List<String> tags, MetricFilter filter,
-                            ValueFilterMap stateFilterMap) {
+                            ValueFilterMap valueFilterMap) {
         super(registry, "riemann-reporter", filter, rateUnit, durationUnit);
         this.riemann = riemann;
         this.clock = clock;
@@ -252,7 +253,7 @@ public class RiemannReporter
         this.localHost = localHost;
         this.tags = tags;
         this.ttl = ttl;
-        this.stateFilterMap = stateFilterMap;
+        this.valueFilterMap = valueFilterMap;
     }
 
     private interface EventClosure {
@@ -358,30 +359,30 @@ public class RiemannReporter
             .getSimpleName());
 
         reporter.name("max").metric(convertDuration(snapshot.getMax()))
-            .state(stateFilterMap.state(timer, "max")).send();
+            .state(valueFilterMap.state(timer, "max")).send();
         reporter.name("mean").metric(convertDuration(snapshot.getMean()))
-            .state(stateFilterMap.state(timer, "mean")).send();
+            .state(valueFilterMap.state(timer, "mean")).send();
         reporter.name("min").metric(convertDuration(snapshot.getMin()))
-            .state(stateFilterMap.state(timer, "min")).send();
+            .state(valueFilterMap.state(timer, "min")).send();
         reporter.name("stddev").metric(convertDuration(snapshot.getStdDev()))
-            .state(stateFilterMap.state(timer, "stddev")).send();
+            .state(valueFilterMap.state(timer, "stddev")).send();
         reporter.name("p50").metric(convertDuration(snapshot.getMedian()))
-            .state(stateFilterMap.state(timer, "p50")).send();
+            .state(valueFilterMap.state(timer, "p50")).send();
         reporter.name("p75")
             .metric(convertDuration(snapshot.get75thPercentile()))
-            .state(stateFilterMap.state(timer, "p75")).send();
+            .state(valueFilterMap.state(timer, "p75")).send();
         reporter.name("p95")
             .metric(convertDuration(snapshot.get95thPercentile()))
-            .state(stateFilterMap.state(timer, "p95")).send();
+            .state(valueFilterMap.state(timer, "p95")).send();
         reporter.name("p98")
             .metric(convertDuration(snapshot.get98thPercentile()))
-            .state(stateFilterMap.state(timer, "p98")).send();
+            .state(valueFilterMap.state(timer, "p98")).send();
         reporter.name("p99")
             .metric(convertDuration(snapshot.get99thPercentile()))
-            .state(stateFilterMap.state(timer, "p99")).send();
+            .state(valueFilterMap.state(timer, "p99")).send();
         reporter.name("p999")
             .metric(convertDuration(snapshot.get999thPercentile()))
-            .state(stateFilterMap.state(timer, "p999")).send();
+            .state(valueFilterMap.state(timer, "p999")).send();
 
         reportMetered(name, timer, timestamp);
     }
@@ -390,16 +391,16 @@ public class RiemannReporter
         final EventClosure reporter = newEvent(name, timestamp, meter.getClass()
             .getSimpleName());
         reporter.name("count").metric(meter.getCount())
-            .state(stateFilterMap.state(meter, "count")).send();
+            .state(valueFilterMap.state(meter, "count")).send();
         reporter.name("m1_rate").metric(convertRate(meter.getOneMinuteRate()))
-            .state(stateFilterMap.state(meter, "m1_rate")).send();
+            .state(valueFilterMap.state(meter, "m1_rate")).send();
         reporter.name("m5_rate").metric(convertRate(meter.getFiveMinuteRate()))
-            .state(stateFilterMap.state(meter, "m5_rate")).send();
+            .state(valueFilterMap.state(meter, "m5_rate")).send();
         reporter.name("m15_rate")
             .metric(convertRate(meter.getFifteenMinuteRate()))
-            .state(stateFilterMap.state(meter, "m15_rate")).send();
+            .state(valueFilterMap.state(meter, "m15_rate")).send();
         reporter.name("mean_rate").metric(convertRate(meter.getMeanRate()))
-            .state(stateFilterMap.state(meter, "mean_rate")).send();
+            .state(valueFilterMap.state(meter, "mean_rate")).send();
     }
 
     private void reportHistogram(String name, Histogram histogram,
@@ -409,34 +410,34 @@ public class RiemannReporter
             .getClass().getSimpleName());
 
         reporter.name("count").metric(histogram.getCount())
-            .state(stateFilterMap.state(histogram, "count")).send();
+            .state(valueFilterMap.state(histogram, "count")).send();
         reporter.name("max").metric(snapshot.getMax())
-            .state(stateFilterMap.state(histogram, "max")).send();
+            .state(valueFilterMap.state(histogram, "max")).send();
         reporter.name("mean").metric(snapshot.getMean())
-            .state(stateFilterMap.state(histogram, "mean")).send();
+            .state(valueFilterMap.state(histogram, "mean")).send();
         reporter.name("min").metric(snapshot.getMin())
-            .state(stateFilterMap.state(histogram, "min")).send();
+            .state(valueFilterMap.state(histogram, "min")).send();
         reporter.name("stddev").metric(snapshot.getStdDev())
-            .state(stateFilterMap.state(histogram, "stddev")).send();
+            .state(valueFilterMap.state(histogram, "stddev")).send();
         reporter.name("p50").metric(snapshot.getMedian())
-            .state(stateFilterMap.state(histogram, "p50")).send();
+            .state(valueFilterMap.state(histogram, "p50")).send();
         reporter.name("p75").metric(snapshot.get75thPercentile())
-            .state(stateFilterMap.state(histogram, "p75")).send();
+            .state(valueFilterMap.state(histogram, "p75")).send();
         reporter.name("p95").metric(snapshot.get95thPercentile())
-            .state(stateFilterMap.state(histogram, "max")).send();
+            .state(valueFilterMap.state(histogram, "max")).send();
         reporter.name("p98").metric(snapshot.get98thPercentile())
-            .state(stateFilterMap.state(histogram, "p95")).send();
+            .state(valueFilterMap.state(histogram, "p95")).send();
         reporter.name("p99").metric(snapshot.get99thPercentile())
-            .state(stateFilterMap.state(histogram, "p99")).send();
+            .state(valueFilterMap.state(histogram, "p99")).send();
         reporter.name("p999").metric(snapshot.get999thPercentile())
-            .state(stateFilterMap.state(histogram, "p999")).send();
+            .state(valueFilterMap.state(histogram, "p999")).send();
     }
 
     private void reportCounter(String name, Counter counter, long timestamp) {
         final EventClosure reporter = newEvent(name, timestamp, counter
             .getClass().getSimpleName());
         reporter.name("count").metric(counter.getCount())
-            .state(stateFilterMap.state(counter)).send();
+            .state(valueFilterMap.state(counter)).send();
     }
 
     private void reportGauge(String name, Gauge gauge, long timestamp) {
