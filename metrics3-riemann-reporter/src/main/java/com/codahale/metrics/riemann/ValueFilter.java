@@ -22,7 +22,7 @@ public class ValueFilter {
 
     public boolean applies(double value) {
         boolean ret = upperIncluded ? value <= upper : value < upper;
-        return ret && lowerIncluded ? lower <= value : lower < value;
+        return ret && (lowerIncluded ? lower <= value : lower < value);
     }
 
     public String getState() {
@@ -31,15 +31,15 @@ public class ValueFilter {
 
     public static class Builder {
 
-        private double lower = Double.MIN_VALUE;
+        private double lower = Double.NEGATIVE_INFINITY;
 
-        private Double upper = Double.MAX_VALUE;
+        private double upper = Double.POSITIVE_INFINITY;
 
         private boolean upperIncluded = true;
 
         private boolean lowerIncluded = true;
 
-        private String state = "ok";
+        private final String state;
 
         public Builder(String state) {
             this.state = state;

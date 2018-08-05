@@ -17,20 +17,20 @@ import com.codahale.metrics.Timer;
 /**
  * Enables {@link ValueFilter}s to be associated with measures reported by
  * Metrics so that state can be computed based on values at report-generation
- * time. The {@link #add(Metric, String, ValueFilter)} method associates a
+ * time. The {@link #addFilter(Metric, String, ValueFilter)} method associates a
  * {@code ValueFilter} with a measure and the {@code state} methods compute what
  * state should be reported based on the value of a measure.
  * <p>
  * For example, {@code
  *   ValueFilterMap valueFilterMap = new ValueFilterMap();
  *   valueFilterMap
-            .add(timer, ValueFilterMap.MAX,
+            .addFilter(timer, ValueFilterMap.MAX,
                  new ValueFilter.Builder("critical").withLower(50).build())
-            .add(timer, ValueFilterMap.MEAN, new ValueFilter.Builder("warn")
+            .addFilter(timer, ValueFilterMap.MEAN, new ValueFilter.Builder("warn")
                 .withUpperExclusive(200).withLower(100).build());
  * } Attaches filters to the mean and max values reported by timers so that
- * {@code get(timer, "max")} will return "critical" if the max value reported by
- * the timer is greater than 50 and {@code get(timer, "mean")} will return
+ * {@code state(timer, "max")} will return "critical" if the max value reported
+ * by the timer is greater than 50 and {@code state(timer, "mean")} will return
  * "warn" if the mean value is between 100 (inclusive) and 200 (exclusive).
  * Filters are applied in the order they are added and the last one that applies
  * wins. If no filter applies, state methods return "ok".
@@ -96,7 +96,9 @@ public class ValueFilterMap {
      */
     private static final Map<String, MeteredValue> meteredValueMap = new HashMap<String, MeteredValue>();
 
-    /** Loads lambda-like maps used to extract values from metrics */
+    /**
+     * Loads lambda-like functions into maps used to extract values from metrics
+     */
     static {
         snapValueMap.put(MAX, new SnapValue() {
 
@@ -208,8 +210,19 @@ public class ValueFilterMap {
         super();
     }
 
-    public ValueFilterMap add(Metric metric, String measure,
-                              ValueFilter filter) {
+    /**
+     * Add a filter associated with the given measure for the given metric.
+     *
+     * @param metric metric instance reporting the measure that the filter
+     *        applies to
+     * @param measure name of the value reported by the metric that the filter
+     *        applies to
+     * @param filter ValueFilter instance that, if it applies, may determine the
+     *        state reported for the measure
+     * @return a reference to *this (for fluent activation)
+     */
+    public ValueFilterMap addFilter(Metric metric, String measure,
+                                    ValueFilter filter) {
         Map<String, List<ValueFilter>> filterMap = filterMapMap.get(metric);
         List<ValueFilter> filterList;
         if (filterMap == null) {
@@ -225,7 +238,16 @@ public class ValueFilterMap {
         return this;
     }
 
-    public List<ValueFilter> get(Metric metric, String measure) {
+    /**
+     * Returns the list of filters that have been added to the given metric,
+     * measure pair.
+     *
+     * @param metric metric the measure belongs to
+     * @param measure name of one of the values reported by the metric
+     * @return list of filters that should be applied when determining the state
+     *         reported with the given measure
+     */
+    public List<ValueFilter> getFilterList(Metric metric, String measure) {
         final Map<String, List<ValueFilter>> filterMap = filterMapMap
             .get(metric);
         if (filterMap == null) {
@@ -234,10 +256,19 @@ public class ValueFilterMap {
         return filterMap.get(measure);
     }
 
+    /**
+     * Determines the state that should be reported with the given measure for
+     * the given timer instance.
+     *
+     * @param timer timer instance
+     * @param measure name of the value reported by the timer whose reported
+     *        state is sought
+     * @return
+     */
     public String state(Timer timer, String measure) {
         final Snapshot snap = timer.getSnapshot();
         final double value = snapValueMap.get(measure).value(snap);
-        return state(get(timer, measure), value);
+        return state(getFilterList(timer, measure), value);
     }
 
     public String state(Histogram histogram, String measure) {
@@ -248,17 +279,17 @@ public class ValueFilterMap {
             final Snapshot snap = histogram.getSnapshot();
             value = snapValueMap.get(measure).value(snap);
         }
-        return state(get(histogram, measure), value);
+        return state(getFilterList(histogram, measure), value);
     }
 
     public String state(Metered metered, String measure) {
         final double value = meteredValueMap.get(measure).value(metered);
-        return state(get(metered, measure), value);
+        return state(getFilterList(metered, measure), value);
     }
 
     public String state(Counter counter) {
         final double value = counter.getCount();
-        return state(get(counter, "count"), value);
+        return state(getFilterList(counter, "count"), value);
     }
 
     public synchronized void clear(Metric metric) {
