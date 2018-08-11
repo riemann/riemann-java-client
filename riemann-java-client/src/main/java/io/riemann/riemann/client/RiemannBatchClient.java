@@ -143,6 +143,11 @@ public class RiemannBatchClient implements IRiemannClient {
       write.promise.attach(clientPromise);
     }
 
+    try {
+      client.flush();
+    } catch (IOException e) {
+      // not actually thrown by any implementation
+    }
     return writes.size();
   }
 

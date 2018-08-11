@@ -5,6 +5,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 
 import io.riemann.riemann.Proto.Msg;
 
@@ -18,11 +19,6 @@ public class SimpleUdpTransport implements SynchronousTransport {
   private final InetSocketAddress remoteAddress;
   private final InetSocketAddress localAddress;
 
-  private volatile Resolver resolver;
-  private volatile Resolver localResolver;
-
-  public volatile boolean cacheDns = true;
-
   public SimpleUdpTransport(final InetSocketAddress remoteAddress) {
     this.remoteAddress = remoteAddress;
     this.localAddress = null;
@@ -34,11 +30,12 @@ public class SimpleUdpTransport implements SynchronousTransport {
   }
 
   public SimpleUdpTransport(final String host, final int port) throws IOException {
-    this(new InetSocketAddress(host, port));
+    this(InetSocketAddress.createUnresolved(host, port));
   }
 
   public SimpleUdpTransport(final String remoteHost, final int remotePort, final String localHost, final int localPort) throws IOException {
-    this(new InetSocketAddress(remoteHost, remotePort), new InetSocketAddress(localHost, localPort) );
+    this(InetSocketAddress.createUnresolved(remoteHost, remotePort),
+      InetSocketAddress.createUnresolved(localHost, localPort));
   }
 
   public SimpleUdpTransport(final String host) throws IOException {
@@ -56,7 +53,7 @@ public class SimpleUdpTransport implements SynchronousTransport {
   @Override
   public Msg sendMessage(final Msg msg) throws IOException {
     final byte[] body = msg.toByteArray();
-    final DatagramPacket packet = new DatagramPacket(body, body.length, resolver.resolve());
+    final DatagramPacket packet = new DatagramPacket(body, body.length, ensureResolved(remoteAddress));
     socket.send(packet);
 
     return null;
@@ -69,19 +66,8 @@ public class SimpleUdpTransport implements SynchronousTransport {
 
   @Override
   public synchronized void connect() throws IOException {
-    if (cacheDns == true) {
-      this.resolver = new CachingResolver(remoteAddress);
-      if( this.localAddress != null){
-        this.localResolver = new CachingResolver(localAddress);
-      }
-    } else {
-      this.resolver = new Resolver(remoteAddress);
-      if( this.localAddress != null){
-        this.localResolver = new Resolver(localAddress);
-      }
-    }
     if (this.localAddress != null){
-      socket = new DatagramSocket(localResolver.resolve());
+      socket = new DatagramSocket(ensureResolved(localAddress));
     }else{
       socket = new DatagramSocket();
     }
@@ -112,5 +98,15 @@ public class SimpleUdpTransport implements SynchronousTransport {
   @Override
   public Transport transport() {
     return null;
+  }
+
+  private static InetSocketAddress ensureResolved(InetSocketAddress maybeUnresolved)
+    throws UnknownHostException {
+    if (maybeUnresolved.isUnresolved()) {
+      return new InetSocketAddress(
+        InetAddress.getByName(maybeUnresolved.getHostName()), maybeUnresolved.getPort());
+    } else {
+      return maybeUnresolved;
+    }
   }
 }
