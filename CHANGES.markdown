@@ -22,3 +22,7 @@ NOTES:
 - Previous versions used to explicitly disable SSL TLS renegotiation. This no longer appears to be part of Netty.
   [Stack Overflow](https://stackoverflow.com/questions/31418644/is-it-possible-to-disable-tls-renegotiation-in-netty-4)
   suggests setting the JDK8+ System Property `jdk.tls.rejectClientInitiatedRenegotiation`
+  
+- Use individual Netty Jars rather than netty-all. Use of netty-all can hinder
+  dependency resolution when different projects use Netty on the same classpath.
+  See example from [Aleph](https://github.com/ztellman/aleph/issues/335)
