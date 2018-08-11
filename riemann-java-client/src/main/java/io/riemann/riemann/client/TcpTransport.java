@@ -201,7 +201,6 @@ public class TcpTransport implements AsynchronousTransport {
             p.addLast("frame-encoder", frameEncoder);
             p.addLast("protobuf-decoder", pbDecoder);
             p.addLast("protobuf-encoder", pbEncoder);
-            p.addLast("channelgroups", new ChannelGroupHandler(channels));
             p.addLast("handler", new TcpHandler(exceptionReporter));
           }});
 
@@ -215,7 +214,9 @@ public class TcpTransport implements AsynchronousTransport {
     bootstrap.remoteAddress(remoteAddress);
 
     // Connect and wait for connection ready
-    final ChannelFuture result = bootstrap.connect().awaitUninterruptibly();
+    final ChannelFuture result = bootstrap.connect();
+    channels.add(result.channel());
+    result.awaitUninterruptibly();
 
     // At this point we consider the client "connected"--even though the
     // connection may have failed. The channel will continue to initiate

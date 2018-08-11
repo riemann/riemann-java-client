@@ -26,3 +26,6 @@ NOTES:
 - Use individual Netty Jars rather than netty-all. Use of netty-all can hinder
   dependency resolution when different projects use Netty on the same classpath.
   See example from [Aleph](https://github.com/ztellman/aleph/issues/335)
+
+- Remove `ChannelGroupHandler` the Transport connect add the channel at each connection attempt.
+  The Netty `Channels` class automatically removes channels as they close.

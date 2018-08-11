@@ -130,7 +130,6 @@ public class UdpTransport implements SynchronousTransport {
             reconnectDelay,
             TimeUnit.MILLISECONDS));
           p.addLast("protobuf-encoder", pbEncoder);
-          p.addLast("channelgroups", new ChannelGroupHandler(channels));
           p.addLast("discard", discardHandler);
         }
       }
@@ -142,7 +141,9 @@ public class UdpTransport implements SynchronousTransport {
     bootstrap.option(ChannelOption.SO_SNDBUF, sendBufferSize.get());
 
     // Connect
-    final ChannelFuture result = bootstrap.connect().awaitUninterruptibly();
+    final ChannelFuture result = bootstrap.connect();
+    channels.add(result.channel());
+    result.awaitUninterruptibly();
 
     // Check for errors.
     if (! result.isSuccess()) {
