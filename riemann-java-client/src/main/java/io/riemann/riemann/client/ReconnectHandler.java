@@ -1,8 +1,10 @@
 package io.riemann.riemann.client;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.group.ChannelGroup;
 import io.netty.handler.timeout.ReadTimeoutException;
 import java.net.ConnectException;
 import java.util.concurrent.TimeUnit;
@@ -10,23 +12,26 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class ReconnectHandler extends ChannelInboundHandlerAdapter {
   private final Bootstrap bootstrap;
+  private final ChannelGroup channels;
   public long startTime = -1;
   public final AtomicLong delay;
   public final TimeUnit unit;
 
-  public ReconnectHandler(Bootstrap bootstrap, AtomicLong delay, TimeUnit unit) {
+  public ReconnectHandler(Bootstrap bootstrap, ChannelGroup channels, AtomicLong delay, TimeUnit unit) {
     this.bootstrap = bootstrap;
+    this.channels = channels;
     this.delay = delay;
     this.unit = unit;
   }
 
   @Override
-  public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+  public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
     try {
       ctx.executor().schedule(new Runnable() {
         @Override
         public void run() {
-          bootstrap.connect();
+          ChannelFuture channelFuture = bootstrap.connect();
+          channels.add(channelFuture.channel());
         }
       }, delay.get(), unit);
     } catch (java.lang.IllegalStateException ex) {

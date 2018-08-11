@@ -127,6 +127,7 @@ public class UdpTransport implements SynchronousTransport {
           ChannelPipeline p = ch.pipeline();
           p.addLast("reconnect", new ReconnectHandler(
             bootstrap,
+            channels,
             reconnectDelay,
             TimeUnit.MILLISECONDS));
           p.addLast("protobuf-encoder", pbEncoder);

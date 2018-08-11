@@ -187,7 +187,7 @@ public class TcpTransport implements AsynchronousTransport {
             // Reconnections
             p.addLast(
               "reconnect",
-              new ReconnectHandler(bootstrap, reconnectDelay, TimeUnit.MILLISECONDS));
+              new ReconnectHandler(bootstrap, channels, reconnectDelay, TimeUnit.MILLISECONDS));
 
             // TLS
             final SslHandler sslHandler = sslHandler();
