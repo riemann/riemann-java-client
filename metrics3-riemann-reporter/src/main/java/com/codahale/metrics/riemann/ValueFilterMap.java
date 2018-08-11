@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 import com.codahale.metrics.Counter;
 import com.codahale.metrics.Histogram;
@@ -263,11 +264,14 @@ public class ValueFilterMap {
      * @param timer timer instance
      * @param measure name of the value reported by the timer whose reported
      *        state is sought
-     * @return
+     * @param durationUnit TimeUnit to convert timer's native (nanosecond)
+     *        measurements to
+     * @return state corresponding to the given measure
      */
-    public String state(Timer timer, String measure) {
+    public String state(Timer timer, String measure, TimeUnit durationUnit) {
         final Snapshot snap = timer.getSnapshot();
-        final double value = snapValueMap.get(measure).value(snap);
+        final double value = snapValueMap.get(measure).value(snap) /
+                             durationUnit.toNanos(1);
         return state(getFilterList(timer, measure), value);
     }
 

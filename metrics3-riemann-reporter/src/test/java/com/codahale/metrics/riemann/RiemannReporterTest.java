@@ -219,9 +219,9 @@ public class RiemannReporterTest {
         // Warn on over 50, critical over 150
         valueFilterMap
             .addFilter(counter, "count",
-                 new ValueFilter.Builder("warn").withLower(50).build())
-            .addFilter(counter, "count",
-                 new ValueFilter.Builder("critical").withLower(150).build());
+                       new ValueFilter.Builder("warn").withLower(50).build())
+            .addFilter(counter, "count", new ValueFilter.Builder("critical")
+                .withLower(150).build());
         // Value is 100, so should be warn
         when(counter.getCount()).thenReturn(100L);
 
@@ -308,11 +308,12 @@ public class RiemannReporterTest {
     public void reportsTimers()
         throws Exception {
         final Timer timer = mock(Timer.class);
-        valueFilterMap
-            .addFilter(timer, ValueFilterMap.MAX,
-                 new ValueFilter.Builder("critical").withLower(50).build())
-            .addFilter(timer, ValueFilterMap.MEAN, new ValueFilter.Builder("warn")
-                .withUpperExclusive(300000000).withLower(100000000).build());
+        valueFilterMap.addFilter(timer, ValueFilterMap.MAX,
+                                 new ValueFilter.Builder("critical")
+                                     .withLower(50).build())
+            .addFilter(timer, ValueFilterMap.MEAN,
+                       new ValueFilter.Builder("warn").withUpperExclusive(300)
+                           .withLower(100).build());
         when(timer.getCount()).thenReturn(1L);
         when(timer.getMeanRate()).thenReturn(2.0);
         when(timer.getOneMinuteRate()).thenReturn(3.0);

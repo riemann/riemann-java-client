@@ -42,8 +42,7 @@ import io.riemann.riemann.client.EventDSL;
  * A reporter that submits events to Riemann
  */
 public class RiemannReporter
-    extends
-    ScheduledReporter {
+    extends ScheduledReporter {
 
     /**
      * Returns a new {@link Builder} for {@link RiemannReporter}.
@@ -355,34 +354,36 @@ public class RiemannReporter
 
     private void reportTimer(String name, Timer timer, long timestamp) {
         final Snapshot snapshot = timer.getSnapshot();
+        final TimeUnit timeUnit = TimeUnit
+            .valueOf(getDurationUnit().toUpperCase());
         final EventClosure reporter = newEvent(name, timestamp, timer.getClass()
             .getSimpleName());
 
         reporter.name("max").metric(convertDuration(snapshot.getMax()))
-            .state(valueFilterMap.state(timer, "max")).send();
+            .state(valueFilterMap.state(timer, "max", timeUnit)).send();
         reporter.name("mean").metric(convertDuration(snapshot.getMean()))
-            .state(valueFilterMap.state(timer, "mean")).send();
+            .state(valueFilterMap.state(timer, "mean", timeUnit)).send();
         reporter.name("min").metric(convertDuration(snapshot.getMin()))
-            .state(valueFilterMap.state(timer, "min")).send();
+            .state(valueFilterMap.state(timer, "min", timeUnit)).send();
         reporter.name("stddev").metric(convertDuration(snapshot.getStdDev()))
-            .state(valueFilterMap.state(timer, "stddev")).send();
+            .state(valueFilterMap.state(timer, "stddev", timeUnit)).send();
         reporter.name("p50").metric(convertDuration(snapshot.getMedian()))
-            .state(valueFilterMap.state(timer, "p50")).send();
+            .state(valueFilterMap.state(timer, "p50", timeUnit)).send();
         reporter.name("p75")
             .metric(convertDuration(snapshot.get75thPercentile()))
-            .state(valueFilterMap.state(timer, "p75")).send();
+            .state(valueFilterMap.state(timer, "p75", timeUnit)).send();
         reporter.name("p95")
             .metric(convertDuration(snapshot.get95thPercentile()))
-            .state(valueFilterMap.state(timer, "p95")).send();
+            .state(valueFilterMap.state(timer, "p95", timeUnit)).send();
         reporter.name("p98")
             .metric(convertDuration(snapshot.get98thPercentile()))
-            .state(valueFilterMap.state(timer, "p98")).send();
+            .state(valueFilterMap.state(timer, "p98", timeUnit)).send();
         reporter.name("p99")
             .metric(convertDuration(snapshot.get99thPercentile()))
-            .state(valueFilterMap.state(timer, "p99")).send();
+            .state(valueFilterMap.state(timer, "p99", timeUnit)).send();
         reporter.name("p999")
             .metric(convertDuration(snapshot.get999thPercentile()))
-            .state(valueFilterMap.state(timer, "p999")).send();
+            .state(valueFilterMap.state(timer, "p999", timeUnit)).send();
 
         reportMetered(name, timer, timestamp);
     }
