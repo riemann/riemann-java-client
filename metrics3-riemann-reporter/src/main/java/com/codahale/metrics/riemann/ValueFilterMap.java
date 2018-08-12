@@ -19,7 +19,7 @@ import com.codahale.metrics.Timer;
  * Enables {@link ValueFilter}s to be associated with measures reported by
  * Metrics so that state can be computed based on values at report-generation
  * time. The {@link #addFilter(Metric, String, ValueFilter)} method associates a
- * {@code ValueFilter} with a measure and the {@code state} methods compute what
+ * {@link ValueFilter} with a measure and the {@code state} methods compute what
  * state should be reported based on the value of a measure.
  * <p>
  * For example, {@code
@@ -31,10 +31,10 @@ import com.codahale.metrics.Timer;
                 .withUpperExclusive(200).withLower(100).build());
  * } Attaches filters to the mean and max values reported by timers so that
  * {@code state(timer, "max")} will return "critical" if the max value reported
- * by the timer is greater than 50 and {@code state(timer, "mean")} will return
- * "warn" if the mean value is between 100 (inclusive) and 200 (exclusive).
- * Filters are applied in the order they are added and the last one that applies
- * wins. If no filter applies, state methods return "ok".
+ * by the timer is greater than or equal to 50 and {@code state(timer, "mean")}
+ * will return "warn" if the mean value is between 100 (inclusive) and 200
+ * (exclusive). Filters are applied in the order they are added and the last one
+ * that applies wins. If no filter applies, state methods return "ok".
  */
 public class ValueFilterMap {
 
@@ -275,6 +275,16 @@ public class ValueFilterMap {
         return state(getFilterList(timer, measure), value);
     }
 
+    /**
+     * Return the state that should be reported for the given measure, histogram
+     * pair.
+     * 
+     * @param histogram histogram instance
+     * @param measure name of a measure included in the histogram report
+     * @return the state associated to the current value of the measure in the
+     *         histogram, or "ok" if there is no state mapped to this measure,
+     *         histogram pair.
+     */
     public String state(Histogram histogram, String measure) {
         double value;
         if (measure.equals(COUNT)) {
@@ -286,16 +296,39 @@ public class ValueFilterMap {
         return state(getFilterList(histogram, measure), value);
     }
 
+    /**
+     * Return the state that should be reported for the given measure, metered
+     * instance pair.
+     * 
+     * @param metered metered instance
+     * @param measure name of a measure included in the metered instance report
+     * @return the state associated to the current value of the measure in the
+     *         metered instance, or "ok" if there is no state mapped to this
+     *         measure, metered instance pair.
+     */
     public String state(Metered metered, String measure) {
         final double value = meteredValueMap.get(measure).value(metered);
         return state(getFilterList(metered, measure), value);
     }
 
+    /**
+     * Return the state that should be reported for the given counter, based on
+     * its value.
+     * 
+     * @param counter Counter instance
+     * @return the state associated to the current value of the counter in the
+     *         or "ok" if there is no state mapped to this Counter value.
+     */
     public String state(Counter counter) {
         final double value = counter.getCount();
         return state(getFilterList(counter, "count"), value);
     }
 
+    /**
+     * Clear all state mappings associated with the given Metric.
+     * 
+     * @param metric Metric instance to clear mappings for
+     */
     public synchronized void clear(Metric metric) {
         final Map<String, List<ValueFilter>> filters = filterMapMap.get(metric);
         for (Entry<String, List<ValueFilter>> entry : filters.entrySet()) {
@@ -304,12 +337,25 @@ public class ValueFilterMap {
         filters.clear();
     }
 
+    /**
+     * Clear all mappings for all Metric instances.
+     */
     public synchronized void clear() {
         for (Metric metric : filterMapMap.keySet()) {
             clear(metric);
         }
     }
 
+    /**
+     * Test all ValueFilters in filters against the given value. If none apply,
+     * return "ok"; otherwise return the state associated with the last filter
+     * that applies.
+     * 
+     * @param filters List of ValueFilters to test
+     * @param value value to test
+     * @return "ok" or the state associated with the last filter in the list
+     *         that applies
+     */
     private String state(List<ValueFilter> filters, double value) {
         String ret = "ok";
         if (filters != null) {
