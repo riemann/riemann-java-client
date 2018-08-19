@@ -1,9 +1,9 @@
 #!/bin/sh
 set -ex
-if [ ! -d "$HOME/protobuf/lib" ]; then
-  wget https://github.com/google/protobuf/releases/download/v2.6.1/protobuf-2.6.1.tar.gz
-  tar -xzvf protobuf-2.6.1.tar.gz
-  cd protobuf-2.6.1 && ./configure --prefix=$HOME/protobuf && make && make install
+if [ ! -f "$HOME/bin/protoc" ]; then
+  cd $HOME
+  wget https://github.com/google/protobuf/releases/download/v3.5.1/protoc-3.5.1-linux-x86_64.zip
+  unzip protoc-3.5.1-linux-x86_64.zip
 else
   echo "Using cached directory."
 fi
