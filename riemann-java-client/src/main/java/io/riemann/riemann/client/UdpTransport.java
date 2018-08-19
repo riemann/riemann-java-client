@@ -1,19 +1,29 @@
 package io.riemann.riemann.client;
 
+import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.DefaultEventLoopGroup;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.group.ChannelGroup;
+import io.netty.channel.group.DefaultChannelGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.nio.NioDatagramChannel;
+import io.netty.handler.codec.protobuf.ProtobufEncoder;
+import io.netty.util.concurrent.GlobalEventExecutor;
+import io.riemann.riemann.Proto.Msg;
+import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.Executors;
-import java.net.*;
-import java.io.*;
-import org.jboss.netty.util.HashedWheelTimer;
-import org.jboss.netty.util.Timer;
-import org.jboss.netty.channel.*;
-import org.jboss.netty.channel.group.*;
-import org.jboss.netty.handler.codec.protobuf.*;
-import org.jboss.netty.bootstrap.ConnectionlessBootstrap;
-import io.riemann.riemann.Proto.Msg;
-import org.jboss.netty.channel.socket.nio.*;
-import java.util.concurrent.atomic.*;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class UdpTransport implements SynchronousTransport {
   // For writes we don't care about
@@ -36,16 +46,17 @@ public class UdpTransport implements SynchronousTransport {
 
   // STATE STATE STATE
   public volatile State state = State.DISCONNECTED;
-  public volatile Timer timer;
-  public volatile ConnectionlessBootstrap bootstrap;
-  public final ChannelGroup channels = new DefaultChannelGroup();
+  public volatile Bootstrap bootstrap;
+  public final EventLoopGroup eventLoopGroup = new NioEventLoopGroup();
+  public final ChannelGroup channels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
 
   // Configuration
   public final AtomicLong reconnectDelay = new AtomicLong(5000);
   public final AtomicLong connectTimeout = new AtomicLong(5000);
   // Changes to this value are applied only on reconnect.
   public final AtomicInteger sendBufferSize = new AtomicInteger(16384);
-  public final AtomicBoolean cacheDns = new AtomicBoolean(true);
+  public final AtomicBoolean autoFlush = new AtomicBoolean(true);
+
   public final InetSocketAddress remoteAddress;
   public final InetSocketAddress localAddress;
 
@@ -104,63 +115,41 @@ public class UdpTransport implements SynchronousTransport {
     };
     state = State.CONNECTING;
 
-    // Set up channel factory
-    final ChannelFactory channelFactory = new NioDatagramChannelFactory(
-        Executors.newCachedThreadPool());
-
-    // Timer
-    timer = HashedWheelTimerFactory.CreateDaemonHashedWheelTimer();
-
     // Create bootstrap
-    bootstrap = new ConnectionlessBootstrap(channelFactory);
+    bootstrap = new Bootstrap().group(eventLoopGroup)
+                  .channel(NioDatagramChannel.class);
 
     // Set up pipeline factory.
-    bootstrap.setPipelineFactory(
-        new ChannelPipelineFactory() {
-          public ChannelPipeline getPipeline() {
-            final ChannelPipeline p = Channels.pipeline();
-
-            p.addLast("reconnect", new ReconnectHandler(
-                bootstrap,
-                timer,
-                reconnectDelay,
-                TimeUnit.MILLISECONDS));
-            p.addLast("protobuf-encoder", pbEncoder);
-            p.addLast("channelgroups", new ChannelGroupHandler(channels));
-            p.addLast("discard", discardHandler);
-
-            return p;
-          }});
-
-    Resolver resolver;
-    Resolver localResolver = null;
-    if (cacheDns.get() == true) {
-        resolver = new CachingResolver(remoteAddress);
-      if(localAddress != null){
-        localResolver = new CachingResolver(localAddress);
+    bootstrap.handler(
+      new ChannelInitializer() {
+        @Override
+        protected void initChannel(Channel ch) throws Exception {
+          ChannelPipeline p = ch.pipeline();
+          p.addLast("reconnect", new ReconnectHandler(
+            bootstrap,
+            channels,
+            reconnectDelay,
+            TimeUnit.MILLISECONDS));
+          p.addLast("protobuf-encoder", pbEncoder);
+          p.addLast("discard", discardHandler);
+        }
       }
-    } else {
-      resolver = new Resolver(remoteAddress);
-      if( localAddress != null){
-        localResolver = new Resolver(localAddress);
-      }
-    }
+    );
 
     // Set bootstrap options
-    bootstrap.setOption("resolver", resolver);
-    bootstrap.setOption("remoteAddress", resolver.resolve());
-    if(localAddress != null){
-      bootstrap.setOption("localAddress", localResolver.resolve());
-    }
-    bootstrap.setOption("sendBufferSize", sendBufferSize.get());
+    bootstrap.remoteAddress(remoteAddress);
+    bootstrap.localAddress(localAddress);
+    bootstrap.option(ChannelOption.SO_SNDBUF, sendBufferSize.get());
 
     // Connect
-    final ChannelFuture result = bootstrap.connect().awaitUninterruptibly();
+    final ChannelFuture result = bootstrap.connect();
+    channels.add(result.channel());
+    result.awaitUninterruptibly();
 
     // Check for errors.
     if (! result.isSuccess()) {
       close(true);
-      throw new IOException("Connection failed", result.getCause());
+      throw new IOException("Connection failed", result.cause());
     }
 
     // Done
@@ -176,27 +165,17 @@ public class UdpTransport implements SynchronousTransport {
     if (!(force || state == State.CONNECTED)) {
       return;
     }
-
-    // Stop timer
+    // Close channel
     try {
-      if (timer != null) {
-        timer.stop();
-      }
+      channels.close().awaitUninterruptibly();
     } finally {
-      timer = null;
 
-      // Close channel
+      // Stop bootstrap
       try {
-        channels.close().awaitUninterruptibly();
+        eventLoopGroup.shutdownGracefully();
       } finally {
-
-        // Stop bootstrap
-        try {
-          bootstrap.releaseExternalResources();
-        } finally {
-          bootstrap = null;
-          state = State.DISCONNECTED;
-        }
+        bootstrap = null;
+        state = State.DISCONNECTED;
       }
     }
   }
@@ -210,11 +189,17 @@ public class UdpTransport implements SynchronousTransport {
   // An Noop
   @Override
   public void flush() throws IOException {
+    channels.flush();
   }
 
   @Override
   public Msg sendMessage(final Msg msg) {
-    channels.write(msg);
+    if (autoFlush.get()) {
+      channels.writeAndFlush(msg);
+    } else {
+      channels.write(msg);
+    }
+
     return null;
   }
 
@@ -223,25 +208,22 @@ public class UdpTransport implements SynchronousTransport {
     return null;
   }
 
-  public class DiscardHandler extends SimpleChannelHandler {
+  public class DiscardHandler extends ChannelInboundHandlerAdapter {
+
     @Override
-    public void messageReceived(ChannelHandlerContext ctx, MessageEvent e) {
+    public void channelActive(ChannelHandlerContext ctx) {
+      ctx.channel().config().setAutoRead(false);
     }
 
     @Override
-    public void channelConnected(ChannelHandlerContext ctx, ChannelStateEvent e) {
-      ctx.getChannel().setReadable(false);
-    }
-
-    @Override
-    public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
       try {
-        exceptionReporter.reportException(e.getCause());
+        exceptionReporter.reportException(cause);
       } catch (final Exception ee) {
         // Oh well
       } finally {
         try {
-          ctx.getChannel().close();
+          ctx.channel().close();
         } catch (final Exception ee) {
           exceptionReporter.reportException(ee);
         }
