@@ -101,7 +101,7 @@ public class ValueFilter {
         }
 
         /**
-         * @param inclusive upper upper bound for the interval
+         * @param upper inclusive upper bound for the interval
          * @return Builder instance with upper set inclusively (i.e. upper bound
          *         is included in the interval)
          */
@@ -111,7 +111,7 @@ public class ValueFilter {
         }
 
         /**
-         * @param exclusive lower lower bound for the interval
+         * @param lower exclusive lower bound for the interval
          * @return Builder instance with lower set exclusively (i.e. lower bound
          *         is not included in the interval)
          */
@@ -122,7 +122,7 @@ public class ValueFilter {
         };
 
         /**
-         * @param exclusive upper upper bound for the interval
+         * @param upper exclusive upper bound for the interval
          * @return Builder instance with upper set exclusively (i.e. upper bound
          *         is not included in the interval)
          */
