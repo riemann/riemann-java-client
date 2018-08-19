@@ -1,117 +1,90 @@
 package com.codahale.metrics.riemann;
 
-import static org.mockito.Mockito.inOrder;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
-import static org.mockito.Mockito.verifyZeroInteractions;
-import static org.mockito.Mockito.when;
+import io.riemann.riemann.client.IRiemannClient;
+import io.riemann.riemann.client.EventDSL;
+import io.riemann.riemann.client.Promise;
 
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
-import java.util.SortedMap;
-import java.util.TreeMap;
-import java.util.concurrent.TimeUnit;
-
+import com.codahale.metrics.*;
+import com.codahale.metrics.Timer;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.InOrder;
+
+import java.io.IOException;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
+
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import com.codahale.metrics.Clock;
-import com.codahale.metrics.Counter;
-import com.codahale.metrics.Gauge;
-import com.codahale.metrics.Histogram;
-import com.codahale.metrics.Meter;
-import com.codahale.metrics.MetricFilter;
-import com.codahale.metrics.MetricRegistry;
-import com.codahale.metrics.Snapshot;
-import com.codahale.metrics.Timer;
-
-import io.riemann.riemann.client.EventDSL;
-import io.riemann.riemann.client.IRiemannClient;
-import io.riemann.riemann.client.Promise;
+import static org.mockito.Mockito.*;
 
 public class RiemannReporterTest {
-
     private final long timestamp = 1000198;
-
     private final List<String> tags = Arrays.asList("taga", "tagb");
-
     private final float ttl = 100;
-
     private final String localHost = "ME";
-
     private final Clock clock = mock(Clock.class);
-
     private final EventDSL eventDSL = mock(EventDSL.class, new Answer() {
-
-        public Object answer(InvocationOnMock invocation) {
-            if (invocation.getMethod().getName() == "send") {
-                // We don't actually look for completion of the promise.
-                return new Promise();
-            } else {
-                // Builder-style continuation
-                return invocation.getMock();
-            }
-        }
+     public Object answer(InvocationOnMock invocation) {
+       if (invocation.getMethod().getName() == "send") {
+         // We don't actually look for completion of the promise.
+         return new Promise();
+       } else {
+         // Builder-style continuation
+         return invocation.getMock();
+       }
+     }
     });
-
     private final IRiemannClient client = mock(IRiemannClient.class);
-
     private final Riemann riemann = spy(new Riemann(client));
-
     private final MetricRegistry registry = mock(MetricRegistry.class);
-
     private final ValueFilterMap valueFilterMap = new ValueFilterMap();
-
-    private final RiemannReporter reporter = RiemannReporter
-        .forRegistry(registry).withClock(clock).prefixedWith("prefix")
-        .convertRatesTo(TimeUnit.SECONDS)
-        .convertDurationsTo(TimeUnit.MILLISECONDS).filter(MetricFilter.ALL)
-        .useSeparator("|").localHost(localHost).withTtl(ttl).tags(tags)
-        .withValueFilterMap(valueFilterMap).build(riemann);
+    private final RiemannReporter reporter = RiemannReporter.forRegistry(registry)
+                                                              .withClock(clock)
+                                                              .prefixedWith("prefix")
+                                                              .convertRatesTo(TimeUnit.SECONDS)
+                                                              .convertDurationsTo(TimeUnit.MILLISECONDS)
+                                                              .filter(MetricFilter.ALL)
+                                                              .useSeparator("|")
+                                                              .localHost(localHost)
+                                                              .withTtl(ttl)
+                                                              .tags(tags)
+                                                              .withValueFilterMap(valueFilterMap)
+                                                              .build(riemann);
 
     @Before
-    public void setUp()
-        throws Exception {
+    public void setUp() throws Exception {
         when(clock.getTime()).thenReturn(timestamp * 1000);
         when(client.event()).thenReturn(eventDSL);
         valueFilterMap.clear();
     }
 
     @Test
-    public void uniqueEventsFromClosure()
-        throws Exception {
+    public void uniqueEventsFromClosure() throws Exception {
         final Meter meter = mock(Meter.class);
-        reporter.report(this.<Gauge> map(), this.<Counter> map(),
-                        this.<Histogram> map(),
-                        this.<Meter> map("meter", meter), this.<Timer> map());
+        reporter.report(this.<Gauge>map(),
+                        this.<Counter>map(),
+                        this.<Histogram>map(),
+                        this.<Meter>map("meter", meter),
+                        this.<Timer>map());
 
         verify(client, times(5)).event();
     }
 
     @Test
-    public void doesNotReportStringGaugeValues()
-        throws Exception {
+    public void doesNotReportStringGaugeValues() throws Exception {
         reportGauge("value");
         verifyNoReporting();
     }
 
     @Test
-    public void doesNotReportNullGaugeValues()
-        throws Exception {
+    public void doesNotReportNullGaugeValues() throws Exception {
         reportGauge(null);
         verifyNoReporting();
     }
 
-    private void verifyNoReporting()
-        throws IOException {
+    private void verifyNoReporting() throws IOException {
         final InOrder inOrder = inOrder(riemann, eventDSL, client);
         inOrder.verify(riemann).connect();
         inOrder.verify(client, never()).event();
@@ -121,17 +94,20 @@ public class RiemannReporterTest {
     }
 
     private void reportGauge(Object value) {
-        reporter.report(map("gauge", gauge(value)), this.<Counter> map(),
-                        this.<Histogram> map(), this.<Meter> map(),
-                        this.<Timer> map());
+        reporter.report(map("gauge", gauge(value)),
+                        this.<Counter>map(),
+                        this.<Histogram>map(),
+                        this.<Meter>map(),
+                        this.<Timer>map());
     }
 
     @Test
-    public void reportsByteGaugeValues()
-        throws Exception {
-        reporter.report(map("gauge", gauge((byte) 1)), this.<Counter> map(),
-                        this.<Histogram> map(), this.<Meter> map(),
-                        this.<Timer> map());
+    public void reportsByteGaugeValues() throws Exception {
+        reporter.report(map("gauge", gauge((byte) 1)),
+                        this.<Counter>map(),
+                        this.<Histogram>map(),
+                        this.<Meter>map(),
+                        this.<Timer>map());
 
         final InOrder inOrder = inOrder(riemann, eventDSL, client);
         inOrder.verify(riemann).connect();
@@ -141,11 +117,12 @@ public class RiemannReporterTest {
     }
 
     @Test
-    public void reportsShortGaugeValues()
-        throws Exception {
-        reporter.report(map("gauge", gauge((short) 1)), this.<Counter> map(),
-                        this.<Histogram> map(), this.<Meter> map(),
-                        this.<Timer> map());
+    public void reportsShortGaugeValues() throws Exception {
+        reporter.report(map("gauge", gauge((short) 1)),
+                        this.<Counter>map(),
+                        this.<Histogram>map(),
+                        this.<Meter>map(),
+                        this.<Timer>map());
 
         final InOrder inOrder = inOrder(riemann, eventDSL, client);
         inOrder.verify(riemann).connect();
@@ -155,11 +132,12 @@ public class RiemannReporterTest {
     }
 
     @Test
-    public void reportsIntegerGaugeValues()
-        throws Exception {
-        reporter.report(map("gauge", gauge(1)), this.<Counter> map(),
-                        this.<Histogram> map(), this.<Meter> map(),
-                        this.<Timer> map());
+    public void reportsIntegerGaugeValues() throws Exception {
+        reporter.report(map("gauge", gauge(1)),
+                        this.<Counter>map(),
+                        this.<Histogram>map(),
+                        this.<Meter>map(),
+                        this.<Timer>map());
 
         final InOrder inOrder = inOrder(riemann, eventDSL, client);
         inOrder.verify(riemann).connect();
@@ -169,11 +147,12 @@ public class RiemannReporterTest {
     }
 
     @Test
-    public void reportsLongGaugeValues()
-        throws Exception {
-        reporter.report(map("gauge", gauge(1L)), this.<Counter> map(),
-                        this.<Histogram> map(), this.<Meter> map(),
-                        this.<Timer> map());
+    public void reportsLongGaugeValues() throws Exception {
+        reporter.report(map("gauge", gauge(1L)),
+                        this.<Counter>map(),
+                        this.<Histogram>map(),
+                        this.<Meter>map(),
+                        this.<Timer>map());
 
         final InOrder inOrder = inOrder(riemann, eventDSL, client);
         inOrder.verify(riemann).connect();
@@ -183,11 +162,12 @@ public class RiemannReporterTest {
     }
 
     @Test
-    public void reportsFloatGaugeValues()
-        throws Exception {
-        reporter.report(map("gauge", gauge(1.1f)), this.<Counter> map(),
-                        this.<Histogram> map(), this.<Meter> map(),
-                        this.<Timer> map());
+    public void reportsFloatGaugeValues() throws Exception {
+        reporter.report(map("gauge", gauge(1.1f)),
+                        this.<Counter>map(),
+                        this.<Histogram>map(),
+                        this.<Meter>map(),
+                        this.<Timer>map());
 
         final InOrder inOrder = inOrder(riemann, eventDSL, client);
         inOrder.verify(riemann).connect();
@@ -197,11 +177,12 @@ public class RiemannReporterTest {
     }
 
     @Test
-    public void reportsDoubleGaugeValues()
-        throws Exception {
-        reporter.report(map("gauge", gauge(1.1)), this.<Counter> map(),
-                        this.<Histogram> map(), this.<Meter> map(),
-                        this.<Timer> map());
+    public void reportsDoubleGaugeValues() throws Exception {
+        reporter.report(map("gauge", gauge(1.1)),
+                        this.<Counter>map(),
+                        this.<Histogram>map(),
+                        this.<Meter>map(),
+                        this.<Timer>map());
 
         final InOrder inOrder = inOrder(riemann, eventDSL, client);
         inOrder.verify(riemann).connect();
@@ -213,8 +194,7 @@ public class RiemannReporterTest {
     }
 
     @Test
-    public void reportsCounters()
-        throws Exception {
+    public void reportsCounters() throws Exception {
         final Counter counter = mock(Counter.class);
         // Warn on over 50, critical over 150
         valueFilterMap
@@ -223,12 +203,14 @@ public class RiemannReporterTest {
             .addFilter(counter, "count", new ValueFilter.Builder("critical")
                 .withLower(150).build());
         // Value is 100, so should be warn
+
         when(counter.getCount()).thenReturn(100L);
 
-        reporter.report(this.<Gauge> map(),
-                        this.<Counter> map("counter", counter),
-                        this.<Histogram> map(), this.<Meter> map(),
-                        this.<Timer> map());
+        reporter.report(this.<Gauge>map(),
+                        this.<Counter>map("counter", counter),
+                        this.<Histogram>map(),
+                        this.<Meter>map(),
+                        this.<Timer>map());
 
         final InOrder inOrder = inOrder(riemann, eventDSL, client);
         inOrder.verify(riemann).connect();
@@ -238,8 +220,7 @@ public class RiemannReporterTest {
     }
 
     @Test
-    public void reportsHistograms()
-        throws Exception {
+    public void reportsHistograms() throws Exception {
         final Histogram histogram = mock(Histogram.class);
         when(histogram.getCount()).thenReturn(1L);
 
@@ -257,9 +238,11 @@ public class RiemannReporterTest {
 
         when(histogram.getSnapshot()).thenReturn(snapshot);
 
-        reporter.report(this.<Gauge> map(), this.<Counter> map(),
-                        this.<Histogram> map("histogram", histogram),
-                        this.<Meter> map(), this.<Timer> map());
+        reporter.report(this.<Gauge>map(),
+                        this.<Counter>map(),
+                        this.<Histogram>map("histogram", histogram),
+                        this.<Meter>map(),
+                        this.<Timer>map());
 
         final InOrder inOrder = inOrder(riemann, eventDSL, client);
         inOrder.verify(riemann).connect();
@@ -280,8 +263,7 @@ public class RiemannReporterTest {
     }
 
     @Test
-    public void reportsMeters()
-        throws Exception {
+    public void reportsMeters() throws Exception {
         final Meter meter = mock(Meter.class);
         when(meter.getCount()).thenReturn(1L);
         when(meter.getOneMinuteRate()).thenReturn(2.0);
@@ -289,9 +271,11 @@ public class RiemannReporterTest {
         when(meter.getFifteenMinuteRate()).thenReturn(4.0);
         when(meter.getMeanRate()).thenReturn(5.0);
 
-        reporter.report(this.<Gauge> map(), this.<Counter> map(),
-                        this.<Histogram> map(),
-                        this.<Meter> map("meter", meter), this.<Timer> map());
+        reporter.report(this.<Gauge>map(),
+                        this.<Counter>map(),
+                        this.<Histogram>map(),
+                        this.<Meter>map("meter", meter),
+                        this.<Timer>map());
 
         final InOrder inOrder = inOrder(riemann, eventDSL, client);
         inOrder.verify(riemann).connect();
@@ -305,8 +289,7 @@ public class RiemannReporterTest {
     }
 
     @Test
-    public void reportsTimers()
-        throws Exception {
+    public void reportsTimers() throws Exception {
         final Timer timer = mock(Timer.class);
         valueFilterMap.addFilter(timer, ValueFilterMap.MAX,
                                  new ValueFilter.Builder("critical")
@@ -322,28 +305,23 @@ public class RiemannReporterTest {
 
         final Snapshot snapshot = mock(Snapshot.class);
         when(snapshot.getMax()).thenReturn(TimeUnit.MILLISECONDS.toNanos(100));
-        when(snapshot.getMean())
-            .thenReturn((double) TimeUnit.MILLISECONDS.toNanos(200));
+        when(snapshot.getMean()).thenReturn((double) TimeUnit.MILLISECONDS.toNanos(200));
         when(snapshot.getMin()).thenReturn(TimeUnit.MILLISECONDS.toNanos(300));
-        when(snapshot.getStdDev())
-            .thenReturn((double) TimeUnit.MILLISECONDS.toNanos(400));
-        when(snapshot.getMedian())
-            .thenReturn((double) TimeUnit.MILLISECONDS.toNanos(500));
-        when(snapshot.get75thPercentile())
-            .thenReturn((double) TimeUnit.MILLISECONDS.toNanos(600));
-        when(snapshot.get95thPercentile())
-            .thenReturn((double) TimeUnit.MILLISECONDS.toNanos(700));
-        when(snapshot.get98thPercentile())
-            .thenReturn((double) TimeUnit.MILLISECONDS.toNanos(800));
-        when(snapshot.get99thPercentile())
-            .thenReturn((double) TimeUnit.MILLISECONDS.toNanos(900));
-        when(snapshot.get999thPercentile())
-            .thenReturn((double) TimeUnit.MILLISECONDS.toNanos(1000));
+        when(snapshot.getStdDev()).thenReturn((double) TimeUnit.MILLISECONDS.toNanos(400));
+        when(snapshot.getMedian()).thenReturn((double) TimeUnit.MILLISECONDS.toNanos(500));
+        when(snapshot.get75thPercentile()).thenReturn((double) TimeUnit.MILLISECONDS.toNanos(600));
+        when(snapshot.get95thPercentile()).thenReturn((double) TimeUnit.MILLISECONDS.toNanos(700));
+        when(snapshot.get98thPercentile()).thenReturn((double) TimeUnit.MILLISECONDS.toNanos(800));
+        when(snapshot.get99thPercentile()).thenReturn((double) TimeUnit.MILLISECONDS.toNanos(900));
+        when(snapshot.get999thPercentile()).thenReturn((double) TimeUnit.MILLISECONDS
+                                                                        .toNanos(1000));
 
         when(timer.getSnapshot()).thenReturn(snapshot);
 
-        reporter.report(this.<Gauge> map(), this.<Counter> map(),
-                        this.<Histogram> map(), this.<Meter> map(),
+        reporter.report(this.<Gauge>map(),
+                        this.<Counter>map(),
+                        this.<Histogram>map(),
+                        this.<Meter>map(),
                         map("timer", timer));
 
         final InOrder inOrder = inOrder(riemann, eventDSL, client);
@@ -383,9 +361,7 @@ public class RiemannReporterTest {
         return gauge;
     }
 
-    private void verifyInOrder(InOrder inOrder, String service, Object metric,
-                               String state)
-        throws Exception {
+    private void verifyInOrder(InOrder inOrder, String service, Object metric, String state) throws Exception {
         inOrder.verify(client).event();
         inOrder.verify(eventDSL).host(localHost);
         inOrder.verify(eventDSL).ttl(ttl);
