@@ -1,3 +1,8 @@
+0.5.1
+=====
+
+* Upgraded dropwizard metrics to 4.0.2
+
 0.5.0
 =====
 
