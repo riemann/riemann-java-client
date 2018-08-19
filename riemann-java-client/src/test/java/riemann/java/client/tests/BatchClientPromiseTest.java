@@ -48,7 +48,7 @@ public class BatchClientPromiseTest {
       }
       client.flush();
       for (int i = 0; i < events.size(); i++) {
-        Msg rsp = promises.get(i).deref(10, TimeUnit.MILLISECONDS,
+        Msg rsp = promises.get(i).deref(100, TimeUnit.MILLISECONDS,
                                         Msg.newBuilder().setOk(false).build());
         assertTrue(!rsp.hasOk() || rsp.getOk());
       }

@@ -1,82 +1,73 @@
 package io.riemann.riemann.client;
 
-import java.io.*;
-
-import org.jboss.netty.channel.*;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelPromise;
+import io.netty.channel.CombinedChannelDuplexHandler;
+import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
 import io.riemann.riemann.Proto.Msg;
+import java.io.IOException;
 
-public class TcpHandler extends SimpleChannelHandler {
+public class TcpHandler
+    extends CombinedChannelDuplexHandler<TcpHandler.Inbound, TcpHandler.Outbound> {
+
   public final WriteQueue queue = new WriteQueue();
-
+  public final ExceptionReporter exceptionReporter;
   // The last error used to fulfill outstanding promises.
   public volatile IOException lastError =
     new IOException("Channel closed.");
 
-  public final ExceptionReporter exceptionReporter;
-
   public TcpHandler(final ExceptionReporter exceptionReporter) {
     this.exceptionReporter = exceptionReporter;
+    init(new Inbound(), new Outbound());
   }
 
-  // We receive a Write, and pass the Write's message downstream, enqueuing
-  // the corresponding promise when the write completes.
-  public void handleDownstream(ChannelHandlerContext ctx, ChannelEvent e)
-    throws Exception {
-
-    // Pass through anything that isn't a message event
-    if (!(e instanceof MessageEvent)) {
-      ctx.sendDownstream(e);
-      return;
+  public class Inbound extends SimpleChannelInboundHandler<Msg> {
+    @Override
+    protected void channelRead0(ChannelHandlerContext ctx, Msg msg) {
+      // When messages are received, deliver them to the next queued promise.
+      queue.take().deliver(msg);
     }
 
-    // Bounce back anything that isn't a Write.
-    final MessageEvent me = (MessageEvent) e;
-    if (!(me.getMessage() instanceof Write)) {
-     ctx.sendUpstream(me);
-      return;
-    }
-
-    // Destructure the write
-    final Write write = (Write) me.getMessage();
-    final Msg message = write.message;
-    final Promise promise = write.promise;
-
-    // When the message event is written...
-    me.getFuture().addListener(new ChannelFutureListener() {
-      // Enqueue the corresponding promise.
-      public void operationComplete(ChannelFuture future) throws Exception {
-        if (future.isSuccess()) {
-          queue.put(promise);
-        } else if (future.getCause() != null) {
-          promise.deliver(
-            new IOException("Write failed.", future.getCause()));
-        } else {
-          promise.deliver(new IOException("Write failed."));
-        }
+    @Override
+    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+      // Log exceptions and close.
+      try {
+        exceptionReporter.reportException(cause);
+      } catch (final Exception ee) {
+        // Oh well
       }
-    });
 
-    // Send the message event downstream
-    Channels.write(ctx, me.getFuture(), message);
-  }
-
-  // When messages are received, deliver them to the next queued promise.
-  @Override
-  public void messageReceived(ChannelHandlerContext c, MessageEvent e) {
-    Msg message = (Msg) e.getMessage();
-    queue.take().deliver(message);
-  }
-
-  // Log exceptions and close.
-  @Override
-  public void exceptionCaught(ChannelHandlerContext c, ExceptionEvent e) {
-    try {
-      exceptionReporter.reportException(e.getCause());
-    } catch (final Exception ee) {
-      // Oh well
+      queue.close(cause);
+      ctx.channel().close();
+      super.exceptionCaught(ctx, cause);
     }
+  }
 
-    queue.close(e.getCause());
-    e.getChannel().close();
+  public class Outbound extends ChannelOutboundHandlerAdapter {
+    @Override
+    public void write(ChannelHandlerContext ctx, Object msg, final ChannelPromise channelPromise)
+        throws Exception {
+      // Destructure the write
+      final Write write = (Write) msg;
+      final Promise<Msg> promise = write.promise;
+
+      channelPromise.addListener(
+          new GenericFutureListener<Future<? super Void>>() {
+            @Override
+            public void operationComplete(Future<? super Void> future) throws Exception {
+              if (future.isSuccess()) {
+                queue.put(promise);
+              } else if (future.cause() != null) {
+                promise.deliver(new IOException("Write failed.", future.cause()));
+              } else {
+                promise.deliver(new IOException("Write failed."));
+              }
+            }
+          });
+      super.write(ctx, ((Write) msg).message, channelPromise);
+    }
   }
 }

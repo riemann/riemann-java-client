@@ -4,23 +4,20 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import java.util.*;
-import java.io.IOException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.Semaphore;
-
-import io.riemann.riemann.client.RiemannClient;
-import io.riemann.riemann.client.TcpTransport;
-import io.riemann.riemann.client.IRiemannClient;
-import io.riemann.riemann.client.ServerError;
-import org.junit.Test;
-
-import io.riemann.riemann.client.IPromise;
-import io.riemann.riemann.client.OverloadedException;
-
-import io.riemann.riemann.Proto.Attribute;
 import io.riemann.riemann.Proto.Event;
 import io.riemann.riemann.Proto.Msg;
+import io.riemann.riemann.client.IPromise;
+import io.riemann.riemann.client.IRiemannClient;
+import io.riemann.riemann.client.OverloadedException;
+import io.riemann.riemann.client.RiemannClient;
+import io.riemann.riemann.client.ServerError;
+import io.riemann.riemann.client.TcpTransport;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
+import org.junit.Test;
 
 public class TcpClientTest {
 	@Test
@@ -104,9 +101,10 @@ public class TcpClientTest {
   }
 
   @Test
-  public void overloadTest() throws IOException {
+  public void overloadTest() throws IOException, InterruptedException {
+	  boolean debug = false;
     // Milliseconds
-    final long delay = 10;     // Server time to process a message
+    final long delay = 5;     // Server time to process a message
     final long fast = 1;                         // Async latencies
     final double slow = ((double) delay) * 0.95; // Backpressure latencies
 
@@ -118,18 +116,38 @@ public class TcpClientTest {
       ((TcpTransport) client.transport()).setWriteBufferLimit(5);
       client.connect();
 
-      final int n = 100000;
+      final int n = 5000;
       final List<IPromise<Msg>> responses = new ArrayList<IPromise<Msg>>(n);
       long latency;
       long t0;
 
-      // Queue up a bunch of writes
+      // Warm up the server
+      for (int j = 0; j < 100; j++) {
+        responses.add(client.event().service("slow").metric(j).send());
+      }
+      for (IPromise<Msg> response : responses) {
+        try {
+          response.deref();
+        } catch (Exception e) {
+          // NO-OP
+        }
+      }
+      responses.clear();
+
+        // Queue up a bunch of writes
       for (int i = 0; i < n; i++) {
         // Measure the time it takes to call .send()
         t0 = System.nanoTime();
         responses.add(client.event().service("slow").metric(i).send());
         latency = System.nanoTime() - t0;
         assertTrue(latency <= 100000000);
+
+        if (i % 2 == 0) {
+          Thread.sleep(1);
+        }
+        if (debug && i % 100 == 0) {
+          System.out.println(i + " sent out of " + n);
+        }
       }
 
       // Deref all and spew out success/failure pairs
@@ -140,7 +158,7 @@ public class TcpClientTest {
       final ArrayList<int[]> results = new ArrayList<int[]>();
       int state = -1;
       int count = 0;
-      long deadline = System.currentTimeMillis() + 1000;
+      long deadline = System.currentTimeMillis() + 2000;
       for (IPromise<Msg> response : responses) {
         try {
           if (null == response.deref(deadline - System.currentTimeMillis(),
@@ -185,21 +203,25 @@ public class TcpClientTest {
       }
 
       // Print outcomes
-      for (int[] res : results) {
-        if (res[0] == 0) {
-          System.out.println("ok\t\t" + res[1]);
-        } else if (res[0] == 1) {
-          System.out.println("timeout\t" + res[1]);
-        } else if (res[0] == 2) {
-          System.out.println("overload\t" + res[1]);
-        } else {
-          System.out.println("other\t\t" + res[1]);
+      if (debug) {
+        for (int[] res : results) {
+          if (res[0] == 0) {
+            System.out.println("ok\t\t" + res[1]);
+          } else if (res[0] == 1) {
+            System.out.println("timeout\t" + res[1]);
+          } else if (res[0] == 2) {
+            System.out.println("overload\t" + res[1]);
+          } else {
+            System.out.println("other\t\t" + res[1]);
+          }
         }
       }
 
       // OKs should come first
       assertTrue(0 == results.get(0)[0]);
       // Should be a lot of OKs
+      int initialOkCount = results.get(0)[1];
+      System.out.println("Count of initial oks: " + initialOkCount);
       assertTrue(10 < results.get(0)[1]);
 
       // Tally up totals
@@ -209,8 +231,8 @@ public class TcpClientTest {
       }
 
       // Should see both overloads and timeouts
-      assertTrue(0 < counts[1]);
-      assertTrue(0 < counts[2]);
+      assertTrue("No Overloads", 0 < counts[1]);
+      assertTrue("No timeouts", 0 < counts[2]);
 
       // No others
       assertTrue(counts[3] == 0);

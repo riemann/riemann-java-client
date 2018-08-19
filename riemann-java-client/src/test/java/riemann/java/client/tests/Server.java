@@ -21,6 +21,7 @@ public abstract class Server {
     this.port = serverSocket.getLocalPort();
     this.serverSocket.setReceiveBufferSize(100);
 		this.thread = mainThread(this.serverSocket);
+		this.thread.setPriority(10);
 		this.thread.start();
 
     return new InetSocketAddress(InetAddress.getLocalHost(), this.port);
