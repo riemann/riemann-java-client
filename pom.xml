@@ -43,15 +43,15 @@
         <!-- TEST DEP's -->
         <dependency>
             <groupId>junit</groupId>
-            <artifactId>junit-dep</artifactId>
-            <version>4.10</version>
+            <artifactId>junit</artifactId>
+            <version>4.12</version>
             <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-all</artifactId>
-            <version>1.9.5</version>
+            <version>1.10.19</version>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -61,7 +61,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>2.3.2</version>
+                <version>3.8.0</version>
                 <configuration>
                     <source>1.7</source>
                     <target>1.7</target>
@@ -71,7 +71,7 @@
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>build-helper-maven-plugin</artifactId>
-                <version>1.5</version>
+                <version>3.0.0</version>
                 <executions>
                     <execution>
                         <id>add-source</id>
@@ -91,7 +91,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
-                <version>2.2.1</version>
+                <version>3.0.1</version>
                 <executions>
                     <execution>
                         <id>attach-sources</id>
@@ -105,7 +105,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
-                <version>2.9.1</version>
+                <version>3.0.1</version>
                 <executions>
                     <execution>
                         <id>attach-javadocs</id>
