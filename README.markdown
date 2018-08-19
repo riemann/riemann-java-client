@@ -119,6 +119,6 @@ mvn deploy -rf :riemann-java-client
 
 # Hacking
 
-You'll need [protobuf 2.6.1](https://github.com/google/protobuf). After
-that, `mvn package` should build a JAR, and `mvn install` will drop it
-in your local repository.
+You'll need [protobuf 3.5.1](https://github.com/google/protobuf) - you
+can just install the `protoc` binary. After that, `mvn package` should
+build a JAR, and `mvn install` will drop it in your local repository.
