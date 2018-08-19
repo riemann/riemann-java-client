@@ -39,6 +39,7 @@ public class RiemannReporterTest {
     private final IRiemannClient client = mock(IRiemannClient.class);
     private final Riemann riemann = spy(new Riemann(client));
     private final MetricRegistry registry = mock(MetricRegistry.class);
+    private final ValueFilterMap valueFilterMap = new ValueFilterMap();
     private final RiemannReporter reporter = RiemannReporter.forRegistry(registry)
                                                               .withClock(clock)
                                                               .prefixedWith("prefix")
@@ -49,12 +50,14 @@ public class RiemannReporterTest {
                                                               .localHost(localHost)
                                                               .withTtl(ttl)
                                                               .tags(tags)
+                                                              .withValueFilterMap(valueFilterMap)
                                                               .build(riemann);
 
     @Before
     public void setUp() throws Exception {
         when(clock.getTime()).thenReturn(timestamp * 1000);
         when(client.event()).thenReturn(eventDSL);
+        valueFilterMap.clear();
     }
 
     @Test
@@ -108,7 +111,7 @@ public class RiemannReporterTest {
 
         final InOrder inOrder = inOrder(riemann, eventDSL, client);
         inOrder.verify(riemann).connect();
-        verifyInOrder(inOrder, "prefix|gauge", (byte) 1);
+        verifyInOrder(inOrder, "prefix|gauge", (byte) 1, null);
         inOrder.verify(client).flush();
         inOrder.verifyNoMoreInteractions();
     }
@@ -123,7 +126,7 @@ public class RiemannReporterTest {
 
         final InOrder inOrder = inOrder(riemann, eventDSL, client);
         inOrder.verify(riemann).connect();
-        verifyInOrder(inOrder, "prefix|gauge", (short) 1);
+        verifyInOrder(inOrder, "prefix|gauge", (short) 1, null);
         inOrder.verify(client).flush();
         inOrder.verifyNoMoreInteractions();
     }
@@ -138,7 +141,7 @@ public class RiemannReporterTest {
 
         final InOrder inOrder = inOrder(riemann, eventDSL, client);
         inOrder.verify(riemann).connect();
-        verifyInOrder(inOrder, "prefix|gauge", 1);
+        verifyInOrder(inOrder, "prefix|gauge", 1, null);
         inOrder.verify(client).flush();
         inOrder.verifyNoMoreInteractions();
     }
@@ -153,7 +156,7 @@ public class RiemannReporterTest {
 
         final InOrder inOrder = inOrder(riemann, eventDSL, client);
         inOrder.verify(riemann).connect();
-        verifyInOrder(inOrder, "prefix|gauge", 1L);
+        verifyInOrder(inOrder, "prefix|gauge", 1L, null);
         inOrder.verify(client).flush();
         inOrder.verifyNoMoreInteractions();
     }
@@ -168,7 +171,7 @@ public class RiemannReporterTest {
 
         final InOrder inOrder = inOrder(riemann, eventDSL, client);
         inOrder.verify(riemann).connect();
-        verifyInOrder(inOrder, "prefix|gauge", 1.1f);
+        verifyInOrder(inOrder, "prefix|gauge", 1.1f, null);
         inOrder.verify(client).flush();
         inOrder.verifyNoMoreInteractions();
     }
@@ -183,7 +186,7 @@ public class RiemannReporterTest {
 
         final InOrder inOrder = inOrder(riemann, eventDSL, client);
         inOrder.verify(riemann).connect();
-        verifyInOrder(inOrder, "prefix|gauge", 1.1);
+        verifyInOrder(inOrder, "prefix|gauge", 1.1, null);
         inOrder.verify(client).flush();
         inOrder.verifyNoMoreInteractions();
 
@@ -193,6 +196,14 @@ public class RiemannReporterTest {
     @Test
     public void reportsCounters() throws Exception {
         final Counter counter = mock(Counter.class);
+        // Warn on over 50, critical over 150
+        valueFilterMap
+            .addFilter(counter, "count",
+                       new ValueFilter.Builder("warn").withLower(50).build())
+            .addFilter(counter, "count", new ValueFilter.Builder("critical")
+                .withLower(150).build());
+        // Value is 100, so should be warn
+
         when(counter.getCount()).thenReturn(100L);
 
         reporter.report(this.<Gauge>map(),
@@ -203,7 +214,7 @@ public class RiemannReporterTest {
 
         final InOrder inOrder = inOrder(riemann, eventDSL, client);
         inOrder.verify(riemann).connect();
-        verifyInOrder(inOrder, "prefix|counter|count", 100L);
+        verifyInOrder(inOrder, "prefix|counter|count", 100L, "warn");
         inOrder.verify(client).flush();
         inOrder.verifyNoMoreInteractions();
     }
@@ -235,17 +246,17 @@ public class RiemannReporterTest {
 
         final InOrder inOrder = inOrder(riemann, eventDSL, client);
         inOrder.verify(riemann).connect();
-        verifyInOrder(inOrder, "prefix|histogram|count", 1L);
-        verifyInOrder(inOrder, "prefix|histogram|max", 2L);
-        verifyInOrder(inOrder, "prefix|histogram|mean", 3.0);
-        verifyInOrder(inOrder, "prefix|histogram|min", 4L);
-        verifyInOrder(inOrder, "prefix|histogram|stddev", 5.0);
-        verifyInOrder(inOrder, "prefix|histogram|p50", 6.0);
-        verifyInOrder(inOrder, "prefix|histogram|p75", 7.0);
-        verifyInOrder(inOrder, "prefix|histogram|p95", 8.0);
-        verifyInOrder(inOrder, "prefix|histogram|p98", 9.0);
-        verifyInOrder(inOrder, "prefix|histogram|p99", 10.0);
-        verifyInOrder(inOrder, "prefix|histogram|p999", 11.0);
+        verifyInOrder(inOrder, "prefix|histogram|count", 1L, "ok");
+        verifyInOrder(inOrder, "prefix|histogram|max", 2L, "ok");
+        verifyInOrder(inOrder, "prefix|histogram|mean", 3.0, "ok");
+        verifyInOrder(inOrder, "prefix|histogram|min", 4L, "ok");
+        verifyInOrder(inOrder, "prefix|histogram|stddev", 5.0, "ok");
+        verifyInOrder(inOrder, "prefix|histogram|p50", 6.0, "ok");
+        verifyInOrder(inOrder, "prefix|histogram|p75", 7.0, "ok");
+        verifyInOrder(inOrder, "prefix|histogram|p95", 8.0, "ok");
+        verifyInOrder(inOrder, "prefix|histogram|p98", 9.0, "ok");
+        verifyInOrder(inOrder, "prefix|histogram|p99", 10.0, "ok");
+        verifyInOrder(inOrder, "prefix|histogram|p999", 11.0, "ok");
 
         inOrder.verify(client).flush();
         inOrder.verifyNoMoreInteractions();
@@ -268,11 +279,11 @@ public class RiemannReporterTest {
 
         final InOrder inOrder = inOrder(riemann, eventDSL, client);
         inOrder.verify(riemann).connect();
-        verifyInOrder(inOrder, "prefix|meter|count", 1L);
-        verifyInOrder(inOrder, "prefix|meter|m1_rate", 2.0);
-        verifyInOrder(inOrder, "prefix|meter|m5_rate", 3.0);
-        verifyInOrder(inOrder, "prefix|meter|m15_rate", 4.0);
-        verifyInOrder(inOrder, "prefix|meter|mean_rate", 5.0);
+        verifyInOrder(inOrder, "prefix|meter|count", 1L, "ok");
+        verifyInOrder(inOrder, "prefix|meter|m1_rate", 2.0, "ok");
+        verifyInOrder(inOrder, "prefix|meter|m5_rate", 3.0, "ok");
+        verifyInOrder(inOrder, "prefix|meter|m15_rate", 4.0, "ok");
+        verifyInOrder(inOrder, "prefix|meter|mean_rate", 5.0, "ok");
         inOrder.verify(client).flush();
         inOrder.verifyNoMoreInteractions();
     }
@@ -280,6 +291,12 @@ public class RiemannReporterTest {
     @Test
     public void reportsTimers() throws Exception {
         final Timer timer = mock(Timer.class);
+        valueFilterMap.addFilter(timer, ValueFilterMap.MAX,
+                                 new ValueFilter.Builder("critical")
+                                     .withLower(50).build())
+            .addFilter(timer, ValueFilterMap.MEAN,
+                       new ValueFilter.Builder("warn").withUpperExclusive(300)
+                           .withLower(100).build());
         when(timer.getCount()).thenReturn(1L);
         when(timer.getMeanRate()).thenReturn(2.0);
         when(timer.getOneMinuteRate()).thenReturn(3.0);
@@ -309,21 +326,21 @@ public class RiemannReporterTest {
 
         final InOrder inOrder = inOrder(riemann, eventDSL, client);
         inOrder.verify(riemann).connect();
-        verifyInOrder(inOrder, "prefix|timer|max", 100.00);
-        verifyInOrder(inOrder, "prefix|timer|mean", 200.00);
-        verifyInOrder(inOrder, "prefix|timer|min", 300.00);
-        verifyInOrder(inOrder, "prefix|timer|stddev", 400.00);
-        verifyInOrder(inOrder, "prefix|timer|p50", 500.00);
-        verifyInOrder(inOrder, "prefix|timer|p75", 600.00);
-        verifyInOrder(inOrder, "prefix|timer|p95", 700.00);
-        verifyInOrder(inOrder, "prefix|timer|p98", 800.00);
-        verifyInOrder(inOrder, "prefix|timer|p99", 900.00);
-        verifyInOrder(inOrder, "prefix|timer|p999", 1000.00);
-        verifyInOrder(inOrder, "prefix|timer|count", 1L);
-        verifyInOrder(inOrder, "prefix|timer|m1_rate", 3.0);
-        verifyInOrder(inOrder, "prefix|timer|m5_rate", 4.0);
-        verifyInOrder(inOrder, "prefix|timer|m15_rate", 5.0);
-        verifyInOrder(inOrder, "prefix|timer|mean_rate", 2.0);
+        verifyInOrder(inOrder, "prefix|timer|max", 100.00, "critical");
+        verifyInOrder(inOrder, "prefix|timer|mean", 200.00, "warn");
+        verifyInOrder(inOrder, "prefix|timer|min", 300.00, "ok");
+        verifyInOrder(inOrder, "prefix|timer|stddev", 400.00, "ok");
+        verifyInOrder(inOrder, "prefix|timer|p50", 500.00, "ok");
+        verifyInOrder(inOrder, "prefix|timer|p75", 600.00, "ok");
+        verifyInOrder(inOrder, "prefix|timer|p95", 700.00, "ok");
+        verifyInOrder(inOrder, "prefix|timer|p98", 800.00, "ok");
+        verifyInOrder(inOrder, "prefix|timer|p99", 900.00, "ok");
+        verifyInOrder(inOrder, "prefix|timer|p999", 1000.00, "ok");
+        verifyInOrder(inOrder, "prefix|timer|count", 1L, "ok");
+        verifyInOrder(inOrder, "prefix|timer|m1_rate", 3.0, "ok");
+        verifyInOrder(inOrder, "prefix|timer|m5_rate", 4.0, "ok");
+        verifyInOrder(inOrder, "prefix|timer|m15_rate", 5.0, "ok");
+        verifyInOrder(inOrder, "prefix|timer|mean_rate", 2.0, "ok");
         inOrder.verify(client).flush();
         inOrder.verifyNoMoreInteractions();
     }
@@ -344,7 +361,7 @@ public class RiemannReporterTest {
         return gauge;
     }
 
-    private void verifyInOrder(InOrder inOrder, String service, Object metric) throws Exception {
+    private void verifyInOrder(InOrder inOrder, String service, Object metric, String state) throws Exception {
         inOrder.verify(client).event();
         inOrder.verify(eventDSL).host(localHost);
         inOrder.verify(eventDSL).ttl(ttl);
@@ -366,6 +383,10 @@ public class RiemannReporterTest {
             inOrder.verify(eventDSL).metric((Long) metric);
         } else {
             throw new RuntimeException();
+        }
+
+        if (state != null) {
+            inOrder.verify(eventDSL).state(state);
         }
 
         inOrder.verify(eventDSL).send();
