@@ -9,6 +9,7 @@
         <module>riemann-java-client</module>
         <module>metrics2-riemann-reporter</module>
         <module>metrics3-riemann-reporter</module>
+        <module>metrics4-riemann-reporter</module>
     </modules>
     <packaging>pom</packaging>
     <name>Riemann Java Client</name>
