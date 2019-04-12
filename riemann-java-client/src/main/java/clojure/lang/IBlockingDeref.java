@@ -10,7 +10,6 @@
 
 /* rich 3/18/11 */
 
-
 package clojure.lang;
 
 import java.lang.Exception;
