@@ -6,7 +6,7 @@ import java.lang.Thread;
 import java.util.concurrent.TimeUnit;
 import org.junit.Before;
 import org.junit.Test;
-import static junit.framework.Assert.assertEquals;
+import static org.junit.Assert.assertEquals;
 import java.io.IOException;
 
 public class PromiseTest {
