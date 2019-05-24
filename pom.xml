@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>io.riemann</groupId>
     <artifactId>riemann-java-client-parent</artifactId>
-    <version>0.5.1-SNAPSHOT</version>
+    <version>0.5.1</version>
     <modules>
         <module>riemann-java-client</module>
         <module>metrics2-riemann-reporter</module>
