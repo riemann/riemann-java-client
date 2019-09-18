@@ -1,0 +1,37 @@
+version: 2
+shared: &shared
+  working_directory: ~/riemann-java-client
+  environment:
+    JVM_OPTS: -Xmx3200m
+  steps:
+    - checkout
+    - restore_cache: # restore the saved cache after the first run or if `pom.xml` has changed
+        key: riemann-java-client-{{ checksum "pom.xml" }}
+    - run: ./scripts/install-protobuf.sh
+    - run: echo "export PATH=$PATH:$HOME/bin" >> $BASH_ENV
+    - run: mvn -DskipTests clean install dependency:resolve-plugins dependency:go-offline
+    - save_cache: # saves the project dependencies
+        paths:
+          - ~/.m2
+        key: riemann-java-client-{{ checksum "pom.xml" }}
+    - run: mvn package # run the actual tests
+    - store_test_results: # uploads the test metadata from the `target/surefire-reports` directory so that it can show up in the CircleCI dashboard. 
+        path: target/surefire-reports    
+
+jobs:
+  jdk8:
+    docker: # run the steps with Docker
+      - image: circleci/openjdk:8-jdk-stretch
+    <<: *shared
+  jdk11:
+    docker: # run the steps with Docker
+      - image: circleci/openjdk:11-jdk-stretch
+    <<: *shared
+
+workflows:
+  version: 2
+  test:
+    jobs:
+      - jdk8
+      - jdk11
+    

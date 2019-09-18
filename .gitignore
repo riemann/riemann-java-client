@@ -1,5 +1,9 @@
+.idea
+.classpath
+.vscode
+.settings
+.project
 target
 bin
-.*
 repl-port
 *.iml
