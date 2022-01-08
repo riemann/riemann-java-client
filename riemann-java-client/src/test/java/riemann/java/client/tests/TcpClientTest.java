@@ -224,6 +224,14 @@ public class TcpClientTest {
       System.out.println("Count of initial oks: " + initialOkCount);
       assertTrue(10 < results.get(0)[1]);
 
+      // timeouts
+      int initialTimeoutCount = results.get(1)[1];
+      System.out.println("Count of initial timeouts: " + initialTimeoutCount);
+      
+      // overloads
+      int initialOverloadCount = results.get(2)[1];
+      System.out.println("Count of initial overloads: " + initialOverloadCount);
+
       // Tally up totals
       int[] counts = new int[4];
       for (int[] res : results) {
