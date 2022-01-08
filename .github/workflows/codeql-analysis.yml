@@ -53,9 +53,16 @@ jobs:
     # ℹ️ Command-line programs to run using the OS shell.
     # 📚 ht
 
-    - run: |
+    - name: Installed protobuf
+      run: |
         ./scripts/install-protobuf.sh
+    
+    - name: Add protoc to path
+      run: |
         echo "$HOME/bin" >> $GITHUB_PATH
+        
+    - name: install deps
+      run: |
         mvn -DskipTests clean install dependency:resolve-plugins dependency:go-offline
         
     - name: Perform CodeQL Analysis
