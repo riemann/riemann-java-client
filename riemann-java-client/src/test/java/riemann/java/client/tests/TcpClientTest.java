@@ -102,7 +102,7 @@ public class TcpClientTest {
 
   @Test
   public void overloadTest() throws IOException, InterruptedException {
-	  boolean debug = false;
+	  boolean debug = true;
     // Milliseconds
     final long delay = 5;     // Server time to process a message
     final long fast = 1;                         // Async latencies
