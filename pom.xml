@@ -106,6 +106,10 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
+                <configuration>
+                  <source>8</source>
+                  <detectJavaApiLink>false</detectJavaApiLink>
+                </configuration>
                 <version>3.4.0</version>
                 <executions>
                     <execution>
