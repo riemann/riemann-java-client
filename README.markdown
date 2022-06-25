@@ -9,7 +9,7 @@ This project encompasses:
 [![Clojars
 Project](https://img.shields.io/clojars/v/io.riemann/riemann-java-client.svg)](https://clojars.org/io.riemann/riemann-java-client)
 
-[![CircleCI](https://circleci.com/gh/riemann/riemann-java-client.svg?style=svg)](https://circleci.com/gh/riemann/riemann-java-client)
+[![Riemann Clojure Client testing](https://github.com/riemann/riemann-java-client/actions/workflows/test.yml/badge.svg)](https://github.com/riemann/riemann-java-client/actions/workflows/test.yml)
 
 ## Artifacts
 
