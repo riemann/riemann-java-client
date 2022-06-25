@@ -44,7 +44,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: Test Results (Java ${{ matrix.java }})
-          path: **/target/surefire-reports/
+          path: '**/target/surefire-reports/'
 
   publish-test-results:
     name: "Publish Tests Results"
