@@ -228,6 +228,16 @@ public class TcpClientTest {
       for (int[] res : results) {
         counts[res[0]] += res[1];
       }
+      
+      // Debug: print what we actually got
+      if (debug) {
+        System.out.println("Total counts:");
+        System.out.println("  Success (0): " + counts[0]);
+        System.out.println("  Timeout (1): " + counts[1]);
+        System.out.println("  Overload (2): " + counts[2]);
+        System.out.println("  Other (3): " + counts[3]);
+        System.out.println("  Total: " + (counts[0] + counts[1] + counts[2] + counts[3]));
+      }
 
       // Should see overloads (but not necessarily timeouts with current config)
       // Note: counts[1] is timeouts, counts[2] is overloads
